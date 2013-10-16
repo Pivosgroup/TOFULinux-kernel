@@ -23,6 +23,7 @@
 #include <linux/io.h>
 #include <plat/io.h>
 #include <mach/hardware.h>
+#include <mach/register.h>
 
 static inline void arch_idle(void)
 {
@@ -32,13 +33,12 @@ static inline void arch_idle(void)
      */
     cpu_do_idle();
 }
-#define WATCHDOG_ENABLE_BIT  (1<<22)
 #define  DUAL_CORE_RESET		  (3<<24)
 static inline void arch_reset(char mode, const char *cmd)
 {
     WRITE_MPEG_REG(VENC_VDAC_SETTING, 0xf);
     WRITE_MPEG_REG(WATCHDOG_RESET, 0);
-    WRITE_MPEG_REG(WATCHDOG_TC, DUAL_CORE_RESET| WATCHDOG_ENABLE_BIT | 100);
+    WRITE_MPEG_REG(WATCHDOG_TC, DUAL_CORE_RESET| 1 << WATCHDOG_ENABLE_BIT | 100);
     while(1)
         arch_idle();
 }
