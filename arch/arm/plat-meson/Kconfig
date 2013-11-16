@@ -47,6 +47,17 @@ config MESON_ARM_GIC
     help
         Interrupt Controller from ARM Company 
 endchoice
+
+config MESON_XBMC_BUILD
+	bool "Configure kernel for Linux XBMC"
+	depends on PLAT_MESON
+	default n
+	help
+	  Configure kernel build for Linux XBMC build.
+	  
+	  This for example includes Mali api 17 drivers which
+	  are not built if this option is not selected.
+
 config MESON_CLOCK_TICK_RATE
 	int "Clock Tick Rate"
 	default 25000000
