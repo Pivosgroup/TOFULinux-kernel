@@ -20,6 +20,7 @@
 #include <asm/cacheflush.h>
 #include <asm/delay.h>
 #include <asm/uaccess.h>
+#include <asm/system.h>
 
 #include <mach/pm.h>
 #include <mach/am_regs.h>
