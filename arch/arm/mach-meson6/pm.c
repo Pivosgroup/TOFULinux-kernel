@@ -1021,6 +1021,11 @@ static int meson_pm_enter(suspend_state_t state)
 
 static void meson_pm_finish(void)
 {
+#if defined(CONFIG_MESON_XBMC_BUILD)
+    // This is workaround for waking device from suspend for linux.
+    // It basically restarts board when reaches this point.
+    arm_machine_restart(1, "");
+#endif
     printk(KERN_INFO "enter meson_pm_finish!\n");
 #if 0
     aml_write_reg32(P_SYS_CPU_0_IRQ_IN0_INTR_MASK, mask_save_0[0]);
