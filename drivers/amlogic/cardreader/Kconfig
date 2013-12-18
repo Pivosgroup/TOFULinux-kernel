@@ -13,6 +13,11 @@ config SD_MMC
 	default y
 	depends on CARDREADER
 
+config SD_MMC_NO_WP_CHECK
+	bool "No write protect check"
+	default n
+	depends on SD_MMC
+
 config SDIO
 	bool "sdio interface driver support"
 	default y
