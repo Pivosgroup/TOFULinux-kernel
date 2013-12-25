@@ -7,7 +7,7 @@
 #include <mach/irqs.h>
 #include <mach/card_io.h>
 //#include <mach/mod_gate.h>
-#if 0
+#ifdef CONFIG_CARDREADER_308
 #include <linux/cardreader/card_block.h>
 #include <linux/cardreader/cardreader.h>
 #include <linux/cardreader/sdio.h>

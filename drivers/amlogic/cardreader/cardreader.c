@@ -77,7 +77,9 @@ static struct memory_card *card_alloc_card(struct card_host *host)
 		return ERR_PTR(-ENOMEM);
 
 	card_init_card(card, host);
-	//list_add(&card->node, &host->cards);
+#ifdef CONFIG_CARDREADER_308
+	list_add(&card->node, &host->cards);
+#endif
 
 	return card;
 }
@@ -109,7 +111,9 @@ static void card_reader_initialize(struct card_host *host)
 
 	for (i=0; i<card_platform->card_num; i++) {
 		card_plat_info = &card_platform->card_info[i];
+#ifndef CONFIG_CARDREADER_308
 		BUG_ON(card_plat_info->max_clock >= CARD_CLOCK_LIMITED);
+#endif
 
 		if (!strcmp("xd_card", card_plat_info->name)) {
 #ifdef CONFIG_XD
@@ -127,7 +131,9 @@ static void card_reader_initialize(struct card_host *host)
 			err = xd_probe(card);
 			if (err)
 				continue;
+#ifndef CONFIG_CARDREADER_308
 			list_add(&card->node, &host->cards);
+#endif
 #endif
 		}
 		else if (!strcmp("ms_card", card_plat_info->name)) {
@@ -146,7 +152,9 @@ static void card_reader_initialize(struct card_host *host)
 			err = ms_probe(card);
 			if (err)
 				continue;
+#ifndef CONFIG_CARDREADER_308
 			list_add(&card->node, &host->cards);
+#endif
 #endif
 		}
 		else if (!strcmp("sd_card", card_plat_info->name)) {
@@ -165,7 +173,9 @@ static void card_reader_initialize(struct card_host *host)
 			err = sd_mmc_probe(card);
 			if (err)
 				continue;
+#ifndef CONFIG_CARDREADER_308
 			list_add(&card->node, &host->cards);
+#endif
 #endif
 		}
 		else if (!strcmp("inand_card", card_plat_info->name)) {
@@ -184,7 +194,9 @@ static void card_reader_initialize(struct card_host *host)
 			err = inand_probe(card);
 			if (err)
 				continue;
+#ifndef CONFIG_CARDREADER_308
 			list_add(&card->node, &host->cards);
+#endif
 #endif
 		}
 		else if (!strcmp("inand_card_lp", card_plat_info->name)) {
@@ -202,7 +214,9 @@ static void card_reader_initialize(struct card_host *host)
 			err = inand_lp_probe(card);
 			if (err)
 				continue;
+#ifndef CONFIG_CARDREADER_308
 			list_add(&card->node, &host->cards);
+#endif
 #endif
 		}
 		else if (!strcmp("sdio_card", card_plat_info->name) && probe_sdio) {
@@ -221,7 +235,9 @@ static void card_reader_initialize(struct card_host *host)
 			err = sdio_probe(card);
 			if (err)
 				continue;
+#ifndef CONFIG_CARDREADER_308
 			list_add(&card->node, &host->cards);
+#endif
 #endif
 		}
 		else if (!strcmp("cf_card", card_plat_info->name)) {
@@ -318,6 +334,7 @@ static irqreturn_t sdxc_interrupt_monitor(int irq, void *dev_id, struct pt_regs 
 
 struct card_host *sdio_host;
 
+#ifndef CONFIG_CARDREADER_308
 static void card_force_init_only(struct card_host *card_host, CARD_TYPE_t card_type)
 {
     struct memory_card *card = NULL;
@@ -367,6 +384,7 @@ static void card_force_init(struct card_host *card_host, CARD_TYPE_t card_type)
     card_detect_change(card_host, 0);
     printk("%s force init ok\n", card->name);
 }
+#endif
 
 static int card_reader_init(struct card_host *host)
 {
@@ -396,21 +414,22 @@ static int card_reader_init(struct card_host *host)
 		printk("request SDXC irq error!!!\n");
 		return -1;
 	}
+#ifndef CONFIG_CARDREADER_308
+    #ifdef CONFIG_SDIO_HARD_IRQ
+	    host->caps |= CARD_CAP_SDIO_IRQ;
+    #endif
 
-#ifdef CONFIG_SDIO_HARD_IRQ
-	host->caps |= CARD_CAP_SDIO_IRQ;
-#endif
-
-#if defined(CONFIG_CARD_DEFERRED_MONITOR) && defined (CONFIG_INAND)
-    card_force_init(host, CARD_INAND);
-#ifdef CONFIG_INAND_LP
-    card_force_init(host, CARD_INAND_LP);
-#endif
-#else ifdef CONFIG_INAND
-	card_force_init_only(host, CARD_INAND);
-#ifdef CONFIG_INAND_LP
-    card_force_init_only(host, CARD_INAND_LP);
-#endif
+    #if defined(CONFIG_CARD_DEFERRED_MONITOR) && defined (CONFIG_INAND)
+	card_force_init(host, CARD_INAND);
+    #ifdef CONFIG_INAND_LP
+	card_force_init(host, CARD_INAND_LP);
+    #endif
+    #else ifdef CONFIG_INAND
+	    card_force_init_only(host, CARD_INAND);
+    #ifdef CONFIG_INAND_LP
+	card_force_init_only(host, CARD_INAND_LP);
+    #endif
+    #endif
 #endif
 	return 0;
 } 
@@ -465,8 +484,12 @@ static int card_reader_monitor(void *data)
 					
 				if(card->unit_state == CARD_UNIT_PROCESSED) {
 					if(card->card_slot_mode == CARD_SLOT_4_1) {
-						if (card_type != CARD_SDIO && card_type != CARD_INAND
-							&& card_type != CARD_INAND_LP) {
+#ifndef CONFIG_CARDREADER_308
+				    if (card_type != CARD_SDIO && card_type != CARD_INAND
+					    && card_type != CARD_INAND_LP) {
+#else
+				    if (card_type != CARD_SDIO && card_type != CARD_INAND) {
+#endif
 	                		card_host->slot_detector = CARD_INSERTED;
 	                		card_4in1_init_type = card_type;
 	                	}
@@ -863,7 +886,9 @@ static void card_reader_rescan(struct work_struct *work)
 			if ((card->card_type == CARD_SDIO)) {
 				err = card_sdio_init_card(card);
 				if (err) {
+#ifndef CONFIG_CARDREADER_308
 					list_del(&card->node);
+#endif
 					card_sdio_remove(host);
 				}
 				else
@@ -966,7 +991,7 @@ static struct card_host_ops amlogic_card_ops = {
 
 struct card_host * the_card_host;
 
-#if defined (SDXC_DEBUG)	
+#if defined (SDXC_DEBUG) || defined(CONFIG_CARDREADER_308)
 static struct aml_card_info my_card_info[] = {
 	[0] = {
 		.name			= "sd_card",
@@ -1050,7 +1075,7 @@ static int amlogic_card_probe(struct platform_device *pdev)
 	aml_host->host = host;	
 	aml_host->bus_mode = 0;
 	aml_host->board_data = pdev->dev.platform_data;
-#if defined (SDXC_DEBUG)	
+#if defined (SDXC_DEBUG) || defined(CONFIG_CARDREADER_308)
 	if (use_sdxc) {
 		aml_host->board_data->card_info = my_card_info;
 		aml_host->board_data->card_num = ARRAY_SIZE(my_card_info);

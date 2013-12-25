@@ -936,9 +936,13 @@ typedef enum _SD_Error_Status_t {
 	SD_ERROR_SWITCH_FUNCTION_COMUNICATION,
 	SD_ERROR_NO_FUNCTION_SWITCH, 
 	SD_MMC_ERROR_NO_CARD_INS,	
-	SD_MMC_ERROR_READ_DATA_FAILED, 
+	SD_MMC_ERROR_READ_DATA_FAILED,
+#ifndef CONFIG_CARDREADER_308
 	SD_SDIO_ERROR_NO_FUNCTION,
         SD_WAIT_FOR_COMPLETION_TIMEOUT
+#else
+	SD_SDIO_ERROR_NO_FUNCTION
+#endif
 } SD_Error_Status_t;
 
 
@@ -1043,7 +1047,9 @@ typedef struct SD_MMC_Card_Info {
 	SD_UHS_I_MODE_t uhs_mode;
 	SD_REG_CID_t raw_cid;	
 	SDIO_Pad_Type_t  io_pad_type;	/* hw io pin pad */
+#ifndef CONFIG_CARDREADER_308
 	enum card_clock_mode  max_clock;
+#endif
 
 	unsigned short card_rca;
 	unsigned char sdio_function_nums;
@@ -1349,6 +1355,8 @@ void sd_mmc_power_off(SD_MMC_Card_Info_t *sd_mmc_info);
 
 void sd_mmc_prepare_init(SD_MMC_Card_Info_t *sd_mmc_info);
 
+#ifndef CONFIG_CARDREADER_308
 int sd_mmc_staff_init(SD_MMC_Card_Info_t *sd_mmc_info);
+#endif
 #endif				//_H_SD_PROTOCOL
     

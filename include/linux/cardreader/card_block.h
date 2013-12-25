@@ -92,7 +92,9 @@ struct memory_card {
 struct card_queue {
 	struct memory_card		*card;
 	struct task_struct	*thread;
+#ifndef CONFIG_CARDREADER_308
 	struct notifier_block   nb;
+#endif
 	//struct completion	thread_complete;
 	//wait_queue_head_t	thread_wq;
 	struct semaphore	thread_sem;

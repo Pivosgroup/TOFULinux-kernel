@@ -85,8 +85,10 @@ void card_cleanup_queue(struct card_queue *cq)
 	
 	card_queue_resume(cq);
 
+#ifndef CONFIG_CARDREADER_308
 	/*should unregister reboot notifier before kthread stop*/
 	unregister_reboot_notifier(&cq->nb);
+#endif
 
 	/* Then terminate our worker thread */
 	kthread_stop(cq->thread);
@@ -183,6 +185,7 @@ static int card_blk_getgeo(struct block_device *bdev, struct hd_geometry *geo)
 	return 0;
 }
 
+#ifndef CONFIG_CARDREADER_308
 static int card_blk_ioctl(struct block_device *bdev, fmode_t mode,
 		    unsigned int cmd, unsigned long arg)
 {
@@ -222,12 +225,15 @@ static int card_blk_ioctl(struct block_device *bdev, fmode_t mode,
 	}
 	return ret;
 }
+#endif
 
 static struct block_device_operations card_ops = {
 	.open = card_blk_open,
 	.release = card_blk_release,
 	.getgeo = card_blk_getgeo,
+#ifndef CONFIG_CARDREADER_308
 	.ioctl = card_blk_ioctl,
+#endif
 	.owner = THIS_MODULE,
 };
 
@@ -365,12 +371,16 @@ static int card_queue_thread(void *d)
 		cq->issue_fn(cq, req);
 		cond_resched();
 	} while (1);
+#ifndef CONFIG_CARDREADER_308
 	/*Stop queue*/
 	spin_lock_irq(q->queue_lock);
 	queue_flag_set_unlocked(QUEUE_FLAG_STOPPED, cq->queue);
 	spin_unlock_irq(q->queue_lock);
+#endif
 	up(&cq->thread_sem);
+#ifndef CONFIG_CARDREADER_308
 	cq->thread = NULL;
+#endif
 	return 0;
 }
 
@@ -530,6 +540,7 @@ static int card_init_bounce_buf(struct card_queue *cq,
 
 #endif
 
+#ifndef CONFIG_CARDREADER_308
 static int card_reboot_notifier(struct notifier_block *nb,
                         unsigned long priority, void * arg)
 {
@@ -546,6 +557,7 @@ static int card_reboot_notifier(struct notifier_block *nb,
 
       return 0;
 }
+#endif
 
 int card_init_queue(struct card_queue *cq, struct memory_card *card,
 		    spinlock_t * lock)
@@ -602,8 +614,10 @@ int card_init_queue(struct card_queue *cq, struct memory_card *card,
 		//goto free_bounce_sg;
 	}
 
+#ifndef CONFIG_CARDREADER_308
 	cq->nb.notifier_call = card_reboot_notifier;
 	register_reboot_notifier(&cq->nb);
+#endif
 
 	return ret;
 }
@@ -986,7 +1000,7 @@ int card_init_inand_lp(struct memory_card* card)
       struct mtd_partition * part = pinfo->partitions;
       int i, err=0, nr_part = pinfo->nr_partitions;
       uint64_t offset=0, size, cur_offset=0;
-#ifdef CONFIG_AML_EMMC_KEY
+#if defined(CONFIG_AML_EMMC_KEY)
       uint64_t key_size;
 #endif
 
@@ -1002,7 +1016,7 @@ int card_init_inand_lp(struct memory_card* card)
                         size = card->capacity- cur_offset;
                   else
                         size = card->capacity - part[i].offset;
-#ifdef CONFIG_AML_EMMC_KEY
+#if defined(CONFIG_AML_EMMC_KEY)
                   key_size = EMMCKEY_AREA_PHY_SIZE;
                   size -= (key_size>>9);
 #endif
@@ -1040,6 +1054,7 @@ void card_remove_inand_lp(struct card_host* host)
 }
 #endif
 
+#ifndef CONFIG_CARDREADER_308
 static ssize_t whole_disk_show(struct device *dev,
 			       struct device_attribute *attr, char *buf)
 {
@@ -1152,6 +1167,7 @@ out_put:
 	blk_free_devt(devt);
 	return ERR_PTR(err);
 }
+#endif
 
 /**
  * add_card_partition : add card partition , refer to 
@@ -1194,7 +1210,11 @@ int add_card_partition(struct memory_card* card, struct gendisk * disk,
 			break;
 #endif
 		}
-           ret =add_inand_partition( disk,1+i,offset,size,0,NULL,part[i].name);
+#ifndef CONFIG_CARDREADER_308
+		ret =add_inand_partition( disk,1+i,offset,size,0,NULL,part[i].name);
+#else
+		ret = add_partition(disk, 1+i, offset, size, 0,NULL);//change by leo
+#endif
 		printk("[%s%d] %20s  offset 0x%012llx, len 0x%012llx %s\n",
 				disk->disk_name, 1+i, part[i].name, offset<<9, size<<9,
 				IS_ERR(ret) ? "add fail":"");
@@ -1240,6 +1260,7 @@ static int card_blk_probe(struct memory_card *card)
 
 	add_disk(card_data->disk);
 
+#ifndef CONFIG_CARDREADER_308
 	if (pinfo->nr_partitions > 1){
 		struct disk_part_iter piter;
 		struct hd_struct *part;
@@ -1251,7 +1272,7 @@ static int card_blk_probe(struct memory_card *card)
 		}
 		disk_part_iter_exit(&piter);
 	}
-
+#endif
 	add_card_partition(card, card_data->disk, pinfo->partitions,
 			pinfo->nr_partitions);
 	return 0;

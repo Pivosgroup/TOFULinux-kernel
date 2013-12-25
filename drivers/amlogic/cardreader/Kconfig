@@ -5,7 +5,12 @@
 menu "Amlogic Card support"
 
 config CARDREADER
-	bool "Card reader support "
+	bool "Card reader support"
+	default n
+
+config CARDREADER_308
+	bool "Compatibility mode (kernel 3.0.8 driver)"
+	depends on CARDREADER
 	default n
 
 config SD_MMC
@@ -17,6 +22,7 @@ config SD_MMC_NO_WP_CHECK
 	bool "No write protect check"
 	default n
 	depends on SD_MMC
+	depends on !CARDREADER_308
 
 config SDIO
 	bool "sdio interface driver support"
@@ -66,13 +72,16 @@ config AML_EMMC_KEY
 config CARD_DEFERRED_MONITOR
 	bool "card deffer monitor to init card(except inand)"
 	default n
+	depends on !CARDREADER_308
 	depends on DEFERRED_MODULE_INIT
 	
 config CARD_NO_POWER_DELAY
 	bool "No power delay in init function when no external power control the card"
 	default n
+	depends on !CARDREADER_308
 
 config CARD_MUTE_INIT_INFO
 	bool "card mute init info"
 	default n
+	depends on !CARDREADER_308
 endmenu

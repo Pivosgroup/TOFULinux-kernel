@@ -40,6 +40,8 @@
 #define CARD_EVENT_NOT_REMOVED      0
 #define CARD_EVENT_REMOVED     		1
 
+
+#ifndef CONFIG_CARDREADER_308
 typedef enum {
 	CARD_XD_PICTURE = 0,
 	CARD_MEMORY_STICK,
@@ -50,6 +52,18 @@ typedef enum {
     CARD_COMPACT_FLASH,   
     CARD_TYPE_UNKNOW
 } CARD_TYPE_t;
+#else
+typedef enum {
+	CARD_XD_PICTURE = 0,
+	CARD_MEMORY_STICK,
+	CARD_SECURE_DIGITAL,    
+	CARD_SDIO,
+	CARD_INAND,
+	CARD_INAND_LP,
+	CARD_COMPACT_FLASH,   
+	CARD_TYPE_UNKNOW
+} CARD_TYPE_t;
+#endif
 
 #define CARD_MAX_UNIT           (CARD_TYPE_UNKNOW+1)
 

@@ -59,14 +59,16 @@ extern unsigned SD_PWR_EN_LEVEL;
 
 extern unsigned SD_WORK_MODE;
 #define SD_MMC_POWER_CONTROL
-#ifndef CONFIG_SD_MMC_NO_WP_CHECK
+#if !defined(CONFIG_SD_MMC_NO_WP_CHECK) && !defined(CONFIG_CARDREADER_308)
 #define SD_MMC_WP_CHECK
 #endif
 
 extern void sd_sdio_enable(SDIO_Pad_Type_t io_pad_type);
 extern void sd_gpio_enable(SDIO_Pad_Type_t io_pad_type);
 extern void sd_gpio_enable_sdioa(void);
+#ifndef CONFIG_CARDREADER_308
 extern void mmc_data3_pull_high(void);
+#endif
 
 #else				//SD_IO_EXTERNAL
 

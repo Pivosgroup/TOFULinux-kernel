@@ -49,18 +49,27 @@ void sd_open(struct memory_card *card)
 	struct aml_card_info *aml_card_info = card->card_plat_info;
 	SD_MMC_Card_Info_t *sd_mmc_info = (SD_MMC_Card_Info_t *)card->card_info;
 
-#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6	
+
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6
 	switch_mod_gate_by_type(MOD_SDIO,1);   
 #endif
 
 	if (aml_card_info->card_extern_init)
 		aml_card_info->card_extern_init();
 	ret = sd_mmc_init(sd_mmc_info);
-	
+
+#ifndef CONFIG_CARDREADER_308
 	if(ret && card->card_type == CARD_SECURE_DIGITAL)
+#else
+	if (ret)
+#endif
 		ret = sd_mmc_init(sd_mmc_info);
 
+#ifndef CONFIG_CARDREADER_308
 	if(ret && card->card_type == CARD_SECURE_DIGITAL)
+#else
+	if (ret)
+#endif
 		ret = sd_mmc_init(sd_mmc_info);
 		
 	card->capacity = sd_mmc_info->blk_nums;
@@ -70,7 +79,7 @@ void sd_open(struct memory_card *card)
       if(sd_mmc_info->write_protected_flag)
             card->state |= CARD_STATE_READONLY;
       
-#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6	
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6
 	switch_mod_gate_by_type(MOD_SDIO,0); 
 #endif
 
@@ -106,7 +115,9 @@ void sd_suspend(struct memory_card *card)
 	struct card_host *host = card->host;
 	
 	SD_MMC_Card_Info_t *sd_mmc_info = (SD_MMC_Card_Info_t *)card->card_info;
-    unsigned int power_delay = sd_mmc_info->sd_mmc_power_delay;
+#ifndef CONFIG_CARDREADER_308
+	unsigned int power_delay = sd_mmc_info->sd_mmc_power_delay;
+#endif
 
 	printk("***Entered %s:%s\n", __FILE__,__func__);	
 	
@@ -131,7 +142,9 @@ void sd_suspend(struct memory_card *card)
 	sd_mmc_info->sdio_clk_unit = 3000;
 	sd_mmc_info->clks_nac = SD_MMC_TIME_NAC_DEFAULT;
 	sd_mmc_info->max_blk_count = card->host->max_blk_count;
-    sd_mmc_info->sd_mmc_power_delay = power_delay;
+#ifndef CONFIG_CARDREADER_308
+	sd_mmc_info->sd_mmc_power_delay = power_delay;
+#endif
 	
 	card_release_host(host);
 	
@@ -182,12 +195,12 @@ static int sd_request(struct memory_card *card, struct card_blk_request *brq)
 			return 0;      	
 		}
 		
-#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6	
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6
 		switch_mod_gate_by_type(MOD_SDIO,1);  
 #endif		
 		ret = sd_mmc_init(sd_mmc_info); 
 		
-#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6	
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6
 		switch_mod_gate_by_type(MOD_SDIO,0);  
 #endif			
 		if(ret){	
@@ -196,7 +209,7 @@ static int sd_request(struct memory_card *card, struct card_blk_request *brq)
 		}
     }	
 
-#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6	
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6
 	switch_mod_gate_by_type(MOD_SDIO,1); 
 #endif	
 	
@@ -216,6 +229,7 @@ static int sd_request(struct memory_card *card, struct card_blk_request *brq)
 	}
 	sd_gpio_enable(sd_mmc_info->io_pad_type);
 
+#ifndef CONFIG_CARDREADER_308
 	if(brq->card_data.error == SD_WAIT_FOR_COMPLETION_TIMEOUT)
         {
                 printk("[sd_request] wait for completion timeout, reinit\n");
@@ -246,6 +260,7 @@ static int sd_request(struct memory_card *card, struct card_blk_request *brq)
                 if(brq->card_data.error == SD_WAIT_FOR_COMPLETION_TIMEOUT)
                         printk("[sd_request] after reinit still error \n");
         }
+#endif
 
 	sdio_card = card_find_card(host, CARD_SDIO);
 	if(sdio_card) {
@@ -255,12 +270,12 @@ static int sd_request(struct memory_card *card, struct card_blk_request *brq)
 	    		WRITE_CBUS_REG(SDIO_CONFIG, sdio_info->sd_save_hw_io_config);
 	      		WRITE_CBUS_REG(SDIO_MULT_CONFIG, sdio_info->sd_save_hw_io_mult_config);
     	}
-#ifdef CONFIG_SDIO_HARD_IRQ
+#if defined(CONFIG_SDIO_HARD_IRQ) || defined(CONFIG_CARDREADER_308)
 		sdio_open_host_interrupt(SDIO_IF_INT);
 #endif
 	}
-	
-#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6	
+
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6
 	switch_mod_gate_by_type(MOD_SDIO,0);
 #endif	
 
@@ -274,7 +289,7 @@ static int sdio_request(struct memory_card *card, struct card_blk_request *brq)
 	unsigned addr, blocks, blksz, fn, read_after_write;
 	u8 *in, *out, *buf;
 
-#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6	
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6
 	switch_mod_gate_by_type(MOD_SDIO,1);   
 #endif	
 	//set_cpus_allowed_ptr(current, cpumask_of(0));
@@ -345,14 +360,14 @@ static int sdio_request(struct memory_card *card, struct card_blk_request *brq)
 
 	//sd_gpio_enable(sdio_info->io_pad_type);
 	brq->card_data.error = 0;
-#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6	
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6
 	switch_mod_gate_by_type(MOD_SDIO,0);  
 #endif		
 	return 0;
 
 err:
 	
-#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6	
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6
 	switch_mod_gate_by_type(MOD_SDIO,0);  
 #endif		
 	//sd_gpio_enable(sdio_info->io_pad_type);
@@ -385,19 +400,21 @@ int sd_mmc_probe(struct memory_card *card)
 	card->card_io_init(card);
 	sd_mmc_prepare_init(sd_mmc_info);
 	sd_mmc_info->io_pad_type = aml_card_info->io_pad_type;
+#ifndef CONFIG_CARDREADER_308
 	sd_mmc_info->max_clock = aml_card_info->max_clock;
+#endif
 	sd_mmc_info->bus_width = SD_BUS_SINGLE;
 	sd_mmc_info->sdio_clk_unit = 3000;
 	sd_mmc_info->clks_nac = SD_MMC_TIME_NAC_DEFAULT;
 	sd_mmc_info->max_blk_count = card->host->max_blk_count;
-    
-    sd_mmc_info->sd_mmc_power_delay = 200;
+
+#ifndef CONFIG_CARDREADER_308
+	sd_mmc_info->sd_mmc_power_delay = 200;
 #ifdef CONFIG_CARD_NO_POWER_DELAY
-    if(!aml_card_info->card_power_en_reg)
-        sd_mmc_info->sd_mmc_power_delay = 0;
+	if(!aml_card_info->card_power_en_reg)
+	    sd_mmc_info->sd_mmc_power_delay = 0;
 #endif
-
-
+#endif
 	return 0;
 }
 
@@ -427,18 +444,21 @@ int sdio_probe(struct memory_card *card)
 	card->card_io_init(card);
 	sd_mmc_prepare_init(sdio_info);
 	sdio_info->io_pad_type = aml_card_info->io_pad_type;
+#ifndef CONFIG_CARDREADER_308
 	sdio_info->max_clock = aml_card_info->max_clock;
+#endif
 	sdio_info->bus_width = SD_BUS_SINGLE;
 	sdio_info->sdio_clk_unit = 3000;
 	sdio_info->clks_nac = SD_MMC_TIME_NAC_DEFAULT;
 	sdio_info->max_blk_count = card->host->max_blk_count;
-    
-    sdio_info->sd_mmc_power_delay = 200;
-#ifdef CONFIG_CARD_NO_POWER_DELAY
-    if(!aml_card_info->card_power_en_reg)
-        sdio_info->sd_mmc_power_delay = 0;
-#endif
 
+#ifndef CONFIG_CARDREADER_308
+	sdio_info->sd_mmc_power_delay = 200;
+#ifdef CONFIG_CARD_NO_POWER_DELAY
+	if(!aml_card_info->card_power_en_reg)
+	    sdio_info->sd_mmc_power_delay = 0;
+#endif
+#endif
 	return 0;
 }
 
@@ -473,16 +493,20 @@ int inand_probe(struct memory_card *card)
 	card->card_io_init(card);
 	sd_mmc_prepare_init(sdio_info);
 	sdio_info->io_pad_type = aml_card_info->io_pad_type;
+#ifndef CONFIG_CARDREADER_308
 	sdio_info->max_clock = aml_card_info->max_clock;
+#endif
 	sdio_info->bus_width = SD_BUS_SINGLE;
 	sdio_info->sdio_clk_unit = 3000;
 	sdio_info->clks_nac = SD_MMC_TIME_NAC_DEFAULT;
 	sdio_info->max_blk_count = card->host->max_blk_count;
-    
-    sdio_info->sd_mmc_power_delay = 200;
+
+#ifndef CONFIG_CARDREADER_308
+	sdio_info->sd_mmc_power_delay = 200;
 #ifdef CONFIG_CARD_NO_POWER_DELAY
-    if(!aml_card_info->card_power_en_reg)
-        sdio_info->sd_mmc_power_delay = 0;
+	if(!aml_card_info->card_power_en_reg)
+	    sdio_info->sd_mmc_power_delay = 0;
+#endif
 #endif
 
 	return 0;
