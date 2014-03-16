@@ -1,0 +1,34 @@
+#
+# Sensor device configuration
+#
+
+menu "AMLOGIC SPI NOR Flash  support"
+
+
+config AMLOGIC_SPI_NOR
+	tristate "AMLOGIC SPI NOR FLASH SUPPORT"
+  select MTD
+  select MTD_DATA_FLASH 
+  select MTD_PARTITIONS
+  select MTD_BLOCK
+  select MTD_CHAR
+  select SPI
+	help
+		This is amlogic spi nor suport
+		This driver can also be built as a module.  If so, the module
+		will be called apollo_nand.ko
+	  
+config SPI_NOR_SECURE_STORAGE
+	bool "amlogic spi nor flash secure storage support "
+	depends on AMLOGIC_SPI_NOR
+	default n
+	help
+		config amlogic spi nor flash secure storage 
+
+config SPI_SECURE_STORAGE_TEST
+	bool "test secure storage"
+	depends on SPI_NOR_SECURE_STORAGE
+	default n
+	help
+		test spi secure storage
+endmenu

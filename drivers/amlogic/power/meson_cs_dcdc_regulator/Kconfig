@@ -1,0 +1,11 @@
+config MESON_CS_DCDC_REGULATOR
+	bool "Meson Current Source DCDC Regulator support "
+	select REGULATOR
+	help
+	  meson current source control DCDC regulator.
+	  
+config AOEE_DCDC
+	bool "ao/ee module dcdc controler "
+	help
+	  ao/ee current source control DCDC regulator.
+

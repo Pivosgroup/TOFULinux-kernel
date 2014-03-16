@@ -1,0 +1,537 @@
+#
+# Kconfig to support customer boards
+#
+
+# Tablet Config Start
+	 
+config MACH_MESON6_G04
+	depends on ARCH_MESON6
+	bool "Meson6 g04 board"
+	help
+	  Support for Amlogic Meson6 g04 customer platform.
+
+config MACH_MESON6_G06
+	depends on ARCH_MESON6
+	bool "Meson6 g06 board"
+	help
+	  Support for Amlogic Meson6 g06 customer platform.
+	  
+config MACH_MESON6_G06_WIFI
+	depends on ARCH_MESON6
+	bool "Meson6 g06_usb_wifi board"
+	help
+	  Support for Amlogic Meson6 g06_usb_wifi customer platform.
+
+config MACH_MESON6_G06_e4
+	depends on ARCH_MESON6
+	bool "Meson6 g06 board"
+	help
+	  Support for Amlogic Meson6 g06_e4 customer platform.
+
+config MACH_MESON6_G24
+	depends on ARCH_MESON6
+	bool "Meson6 g24 board"
+	help
+	  Support for Amlogic Meson6 g24 customer platform.
+
+config MACH_MESON6_G24_AM702
+	depends on ARCH_MESON6
+	bool "Meson6 g24 board"
+	help
+	  Support for Amlogic Meson6 g24 customer platform.
+	  
+config MACH_MESON6_G24_TWREF
+	depends on ARCH_MESON6
+	bool "Meson6 g24 board"
+	help
+	  Support for Amlogic Meson6 g24 customer platform.
+	  
+config MACH_MESON6_G24_K7
+	depends on ARCH_MESON6
+	bool "Meson6 g24_K7 board"
+	help
+	  Support for Amlogic Meson6 g24_K7 customer platform.
+config MACH_MESON6_G34
+	depends on ARCH_MESON6
+	bool "Meson6 86V4 board"
+	help
+	  Support for Amlogic Meson6 g34 malata customer platform.
+
+config MACH_MESON6_G33_NEW
+	depends on ARCH_MESON6
+	bool "Meson6 86V4 board"
+	help
+	  Support for Amlogic Meson6 g33 86V4 customer platform ,which use SDIO WIFI and with HDMI.
+	  
+config MACH_MESON6_G33_YIKANG
+	depends on ARCH_MESON6
+	bool "Meson6 86V4 board"
+	help
+	  Support for Amlogic Meson6 g33 86V4 YINKANG customer platform ,which use USB  WIFI and with HDMI.
+
+	  
+config MACH_MESON6_G33_REFAM701
+	depends on ARCH_MESON6
+	bool "Meson6 86V4 board"
+	help
+	  Support for Amlogic Meson6 g33 86V4 customer platform ,which use SDIO WIFI and with HDMI.
+config MACH_MESON6_G33_HC908K_8723
+	depends on ARCH_MESON6
+	bool "Meson6 HC908K_8723 board"
+	help
+	  Support for Amlogic MXS HC908K_8723 1G platform ,which use rtl8723 WIFI and BT with HDMI.
+config MACH_MESON6_G33_1212NEW
+	depends on ARCH_MESON6
+	bool "Meson6 g33 with AM1212New board"
+	help
+	  Support for Amlogic Meson6 g33 with AM1212 New customer platform.
+
+config MACH_MESON6_G33_MID7065C
+        depends on ARCH_MESON6
+        bool "Meson6 g33_MID7065C board"
+        help
+          Support for Amlogic Meson6 g33 MID7065C customer platform.
+		  
+config MACH_MESON6_G33_A185
+        depends on ARCH_MESON6
+        bool "Meson6 g33_TAB700 board"
+        help
+          Support for Amlogic Meson6 g33 A185 customer platform.			  
+		  
+config MACH_MESON6_G12_M805A1
+	depends on ARCH_MESON6
+	bool "Meson6 g12 M805A1 board"
+	help
+	  Support for Amlogic Meson6 g12 M805A1 customer platform.
+	  
+config MACH_MESON6_G24_M8306HCM
+	depends on ARCH_MESON6
+	bool "Meson6 g24_M8306HCM board"
+	help
+	  Support for Amlogic Meson6 g24_M8306HCM customer platform.
+	  
+config MACH_MESON6_G24_M9308CM
+	depends on ARCH_MESON6
+	bool "Meson6 g24_M9308CM board"
+	help
+	  Support for Amlogic Meson6 g24_M9308CM customer platform.
+
+config MACH_MESON6_G24_M7317HCM
+	depends on ARCH_MESON6
+	bool "Meson6 g24_M7317HCM board"
+	help
+	  Support for Amlogic Meson6 g24_M8306HCM customer platform.
+
+config MACH_MESON6_G24_M7317CM
+	depends on ARCH_MESON6
+	bool "Meson6 g24_M7317CM board"
+	help
+	  Support for Amlogic Meson6 g24_M7317CM customer platform.
+	  
+config MACH_MESON6_G24_M9307CM
+	depends on ARCH_MESON6
+	bool "Meson6 g24_M9307CM board"
+	help
+	  Support for Amlogic Meson6 g24_M9307CM customer platform.
+
+config MACH_MESON6_G24_M1306CM
+	depends on ARCH_MESON6
+	bool "Meson6 g24_M1306CM board"
+	help
+	  Support for Amlogic Meson6 g24_M1306CM customer platform.
+	  
+config MACH_MESON6_G12_M806A2
+	depends on ARCH_MESON6
+	bool "Meson6 g12 M806A2 board"
+	help
+	  Support for Amlogic Meson6 g12 M806A2 customer platform.	 
+	  
+config MACH_MESON6_G12_M806A1BN
+	depends on ARCH_MESON6
+	bool "Meson6 g12 M806A1BN board"
+	help
+	  Support for Amlogic Meson6 g12 M806A1BN customer platform.		  
+
+config MACH_MESON6_G12_M1005A1
+	depends on ARCH_MESON6
+	bool "Meson6 g12 M1005A1 board"
+	help
+	  Support for Amlogic Meson6 g12 M1005A1 customer platform.
+	  
+config MACH_MESON6_G12_M1006A1
+	depends on ARCH_MESON6
+	bool "Meson6 g12 M1006A1 board"
+	help
+	  Support for Amlogic Meson6 g12 M1006A1 customer platform.
+config MACH_MESON6_G12_M1006A2
+	depends on ARCH_MESON6
+	bool "Meson6 g12 M1006A2 board"
+	help
+	  Support for Amlogic Meson6 g12 M1006A2 customer platform.
+
+config MACH_MESON6_G12_M1006AG2DM
+	depends on ARCH_MESON6
+	bool "Meson6 g12 M11006AG2DM board"
+	help
+	  Support for Amlogic Meson6 g12 M1006AG2 customer platform.
+
+config MACH_MESON6_G12_M1006AG2CMX
+	depends on ARCH_MESON6
+	bool "Meson6 g12 M11006AG2CMX board"
+	help
+	  Support for Amlogic Meson6 g12 M1006AG2 customer platform.
+
+config MACH_MESON6_G12_M1006AG2BN
+	depends on ARCH_MESON6
+	bool "Meson6 g12 M11006AG2BN board"
+	help
+	  Support for Amlogic Meson6 g12 M1006AG2 customer platform.
+
+# Tablet Config End
+
+config MACH_MESON6_G02
+  depends on ARCH_MESON6
+  bool "Meson6 g02 board"
+  help 
+    Support for Amlogic Meson6 g02 customer platform.
+config MACH_MESON6_G02_DONGLE
+  depends on ARCH_MESON6
+  bool "Meson6 g02 dongle board"
+  help 
+    Support for Amlogic Meson6 g02 dongle platform.
+config MACH_MESON6_G02_RECOVERY
+  depends on ARCH_MESON6
+  bool "Meson6 g02 board"
+  help 
+    Support for Amlogic Meson6 g02 customer platform.
+config MACH_MESON6_G02_JB42
+  depends on ARCH_MESON6
+  bool "Meson6 g02 board"
+  help 
+    Support for Amlogic Meson6 g02 platform for jb4.2.   
+        
+config MACH_MESON6_G28
+  depends on ARCH_MESON6
+  bool "Meson6 g28 board"
+  help 
+    Support for Amlogic Meson6 g28 customer platform.
+    
+config MACH_MESON6_G29
+  depends on ARCH_MESON6
+  bool "Meson6 g29 board"
+  help 
+    Support for Amlogic Meson6 g29 customer platform.
+
+config MACH_MESON6_G18
+  depends on ARCH_MESON6
+  bool "Meson6 g18 board"
+  help 
+    Support for Amlogic Meson6 g18 customer platform.
+
+config MACH_MESON6_G18_RECOVERY
+  depends on ARCH_MESON6
+  bool "Meson6 g18 board"
+  help 
+    Support for Amlogic Meson6 g18 customer platform. 
+
+config MACH_MESON6_G18_R2
+  depends on ARCH_MESON6 && !MACH_MESON6_G18
+  bool "Meson6 g18 board r2"
+  help
+    Support for Amlogic Meson6 g18 customer platform. Storage layout r2.
+
+config MACH_MESON6_G02_D7
+	depends on ARCH_MESON6
+	bool "Meson6 g02-d7 board"
+	help
+	  Support for Amlogic Meson6 g02-d7 customer platform.	  
+config MACH_MESON6_G02_D7IS
+	depends on ARCH_MESON6
+	bool "Meson6 g02-d7is board"
+	help
+	  Support for Amlogic Meson6 g02-d7is customer platform.	  
+config MACH_MESON6_G02_D8
+	depends on ARCH_MESON6
+	bool "Meson6 g02-d8 board"
+	help
+	  Support for Amlogic Meson6 g02-d8 customer platform.	  
+
+config MACH_MESON6_G02_TD7100
+	depends on ARCH_MESON6
+	bool "Meson6 g02-td7100 board"
+	help
+	  Support for Amlogic Meson6 g02-td7100 customer platform.	
+
+config MACH_MESON6_G02_826DS
+	depends on ARCH_MESON6
+	bool "Meson6 g02-826ds board"
+	help
+	  Support for Amlogic Meson6 g02-826ds customer platform.	  
+	  
+config MACH_MESON6_G02_D9
+	depends on ARCH_MESON6
+	bool "Meson6 g02 board"
+	help
+	  Support for Amlogic Meson6 g02_d9 customer platform.
+	  	  
+config MACH_MESON6_G38
+  depends on ARCH_MESON6
+  bool "Meson6 g38 board"
+  help 
+    Support for Amlogic Meson6 g38 customer platform.
+    
+config MACH_MESON6_G31
+  depends on ARCH_MESON6
+  bool "Meson6 g31 board"
+  help 
+    Support for Amlogic Meson6 M6L SOCKET Board.    
+
+config MACH_MESON6_G26_M777ND
+       depends on ARCH_MESON6
+       bool "Meson6 G26_M777ND board"
+       help
+         Support for Amlogic Meson6 G26_M777ND customer platform.
+
+config MACH_MESON6_G35
+  depends on ARCH_MESON6
+  bool "Meson6 g35 board"
+  help
+    Support for Amlogic Meson6 g35 customer platform.
+
+config MACH_MESON6_G35_V131
+  depends on ARCH_MESON6 && !MACH_MESON6_G35
+  bool "Meson6 g35 V1.31 board"
+  help
+    Enable for g35 with PCB marking V1.31 2012/12/10.
+
+config MACH_MESON6_G40
+  depends on ARCH_MESON6
+  bool "Meson6 g40 board"
+  help
+    Support for Amlogic Meson6 g40 customer platform.
+
+config MACH_MESON6_G38_9203
+  depends on ARCH_MESON6
+  bool "Meson6 g38_97203 board"
+  help 
+    Support for Amlogic Meson6 g38_97203 customer platform.
+
+config MACH_MESON6_G38_7203
+  depends on ARCH_MESON6
+  bool "Meson6 g38_7203 board"
+  help 
+    Support for Amlogic Meson6 g38_7203 customer platform.
+    
+    
+config MACH_MESON6_G38_10203
+  depends on ARCH_MESON6
+  bool "Meson6 g38_10203 board"
+  help 
+    Support for Amlogic Meson6 g38_10203 customer platform.
+    
+config MACH_MESON6_G19
+  depends on ARCH_MESON6
+  bool "Meson6 g19 board"
+  help
+    Support for Amlogic Meson6 g19 customer platform.
+    
+config MACH_MESON6_G11_E8HDS
+	depends on ARCH_MESON6
+	bool "Meson6 g11e8hds board"
+	help
+	  Support for Amlogic Meson6 g11e8hds customer platform.
+
+config MACH_MESON6_G30_N87A_IPS
+	depends on ARCH_MESON6
+	bool "Meson6 g30 N87A with IPS panel board"
+	help
+	  Support for Amlogic Meson6 g30 n87a with IPS panel board customer platform
+	  
+config MACH_MESON6_G20
+  depends on ARCH_MESON6
+  bool "Meson6 g20 comcast board"
+  help 
+    Support for Amlogic Meson6 g20 comcast platform.
+
+	  
+config MACH_MESON6_G39
+	depends on ARCH_MESON6
+	bool "Meson6 g39 board"
+	help
+	  Support for Amlogic Meson6 g39 customer platform.
+
+config MACH_MESON6_G39EMMC7
+	depends on ARCH_MESON6
+	bool "Meson6 g39emmc7 board"
+	help
+	  Support for Amlogic Meson6 g39emmc7 customer platform.
+
+config MACH_MESON6_G17_M1701
+        depends on ARCH_MESON6
+        bool "Meson6 g17_m1701 board"
+        help
+          Support for Amlogic Meson6 g17_m1701 customer platform.
+config MACH_MESON6_G39EMMC8
+	depends on ARCH_MESON6
+	bool "Meson6 g39emmc8 board"
+	help
+	  Support for Amlogic Meson6 g39emmc8 customer platform.
+
+config MACH_MESON6_G39EMMC10
+	depends on ARCH_MESON6
+	bool "Meson6 g39emmc10 board"
+	help
+	  Support for Amlogic Meson6 g39emmc10 customer platform.
+
+config MACH_MESON6_G11_E8HD_EMMC
+	depends on ARCH_MESON6
+	bool "Meson6 g11e8hd_emmc board"
+	help
+	  Support for Amlogic Meson6 g11e8hd_emmc customer platform.
+
+config MACH_MESON6_G11_F8_EMMC
+	depends on ARCH_MESON6
+	bool "Meson6 g11f8_emmc board"
+	help
+	  Support for Amlogic Meson6 g11f8_emmc customer platform.
+	  
+config MACH_MESON6_G11_A1002
+	depends on ARCH_MESON6
+	bool "Meson6 g11 a1002 board"
+	help
+	  Support for Amlogic Meson6 g11 a1002 customer platform.
+
+config MACH_MESON6_HKC_Y703H
+	depends on ARCH_MESON6
+	bool "Meson6 HKC Y703H board"
+	help
+	  Support for Amlogic Meson6 HKC customer Y703H platform.	  
+
+config MACH_MESON6_HKC_Y703HA79
+     depends on ARCH_MESON6
+     bool "Meson6 HKC A79 board"
+     help
+      Support for Amlogic Meson6 HKC customer A79 platform.
+      
+config MACH_MESON6_G17_M1703
+	depends on ARCH_MESON6
+	bool "Meson6 g17_m1703 board"
+	help
+	  Support for Amlogic Meson6 g17_m1703 customer platform.
+	  
+config MACH_MESON6_G17_T102
+	depends on ARCH_MESON6
+	bool "Meson6 g17_t102 board"
+	help
+	  Support for Amlogic Meson6 g17_t102 customer platform.	  
+config MACH_MESON6_G20_JB42
+	depends on ARCH_MESON6
+	bool "Meson6 g20 board JB42"
+	help
+	Support for Amlogic Meson6 g02 platform for jb4.2.
+
+config MACH_MESON6_G25_M7000NBD
+       depends on ARCH_MESON6
+       bool "Meson6 G25_M7000NBD board"
+       help
+         Support for Amlogic Meson6 G25_M7000NBD customer platform.
+		 
+config MACH_MESON6_G25_M8000NBD
+       depends on ARCH_MESON6
+       bool "Meson6 G25_M8000NBD board"
+       help
+         Support for Amlogic Meson6 G25_M8000NBD customer platform.
+		 
+config MACH_MESON6_G26_Q8
+	depends on ARCH_MESON6
+	bool "Meson6  g26ref Haier Q8 board"
+	help
+	  Support for Amlogic Meson6 g26 Haier Q8 customer platform ,which use sdio WIFI AP6210 and with HDMI.
+	 
+config MACH_MESON6_GT7260
+        depends on ARCH_MESON6
+        bool "Meson6 gt7260 board"
+        help
+          Support for Amlogic Meson6 gt7260 customer platform.
+	  
+config MACH_MESON6_JK_V1_MXS
+	depends on ARCH_MESON6
+	bool "Meson6 jk board"
+	help
+	  Support for Amlogic Meson6 jieke customer platform ,which use USB WIFI and with HDMI.
+	  
+
+config MACH_MESON6_G17_M1x12
+	depends on ARCH_MESON6
+	bool "Meson6 g17_t102 board"
+	help
+	  Support for Amlogic Meson6 g17_M1x12 customer platform.
+
+config MACH_MESON6_G17_M1902
+	depends on ARCH_MESON6
+	bool "Meson6 g17_m1902 board"
+	help
+	  Support for Amlogic Meson6 g17_M1902 customer platform.
+
+config MACH_MESON6_G17_M1902BT
+	depends on ARCH_MESON6
+	bool "Meson6 g17_m1902bt board"
+	help
+	  Support for Amlogic Meson6 g17_M1902BT customer platform.
+	  
+config MACH_MESON6_G17_T069
+	depends on ARCH_MESON6
+	bool "Meson6 g17_t069 board"
+	help
+	  Support for Amlogic Meson6 g17_t069 customer platform.	  
+config MACH_MESON6TV_H100
+        depends on ARCH_MESON6TV
+        bool "Meson6tv h100 board"
+        help 
+          Support for Amlogic Meson6tv h100 customer platform. 
+
+config MACH_MESON6TV_H101
+        depends on ARCH_MESON6TV
+        bool "Meson6tv h101 board"
+        help 
+          Support for Amlogic Meson6tv h101 customer platform. 
+
+config MACH_MESON6_G17_M1706
+	depends on ARCH_MESON6
+	bool "Meson6 g17_m1706 board"
+	help
+	  Support for Amlogic Meson6 g17_M1706 customer platform.
+	  
+config MACH_MESON6_G17_M1706_T2
+	depends on ARCH_MESON6
+	bool "Meson6 g17_m1706_T2 board"
+	help
+	  Support for Amlogic Meson6 g17_M1706_T2 customer platform.	  
+
+config MACH_MESON6_G17_M170m
+	depends on ARCH_MESON6
+	bool "Meson6 g17_m170m board"
+	help
+	  Support for Amlogic Meson6 g17_M170m customer platform.
+
+
+config MACH_MESON6_G11_T80
+	depends on ARCH_MESON6
+	bool "Meson6 g11 t80 board"
+	help
+	  Support for Amlogic Meson6 g11 t80 customer platform.		  
+
+config MACH_MESON6_G17_HKC
+	depends on ARCH_MESON6
+	bool "Meson6 g17_t102 board"
+	help
+	  Support for Amlogic Meson6 g17_M1x12 customer platform.
+	  
+config MACH_MESON6_G33_EMID7
+	depends on ARCH_MESON6
+	bool "Meson6 EMID7 board"
+	help
+	  Support for Amlogic Meson6 g33 EMID7 customer platform.	
+
+	  
+source "customer/boards/ASD/Kconfig"

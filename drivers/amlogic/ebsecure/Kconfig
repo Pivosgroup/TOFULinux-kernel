@@ -1,0 +1,13 @@
+#
+# Amlogic efuse device configuration
+#
+
+menu "Amlogic eb secure Support"
+
+config EB_SECURE
+	bool "eb secure Driver"
+	default n
+	help
+		eb secure is a rsa encrypt/decrypt lib,it used for safety
+
+endmenu

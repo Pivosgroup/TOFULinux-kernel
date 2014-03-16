@@ -1,0 +1,12 @@
+#
+# Video Resource Manager
+#
+
+menu "Video Resource Manager"
+config AML_VIDEO_RES_MGR
+	bool "Amlogic Video Resource Manager"
+	default n
+	help
+		For Future use of multiinstance video playing. Now It can provide
+		Frame to user spaces.
+endmenu
