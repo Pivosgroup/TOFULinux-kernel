@@ -105,6 +105,7 @@ obj-$(CONFIG_MACH_MESON6_G29) += board-m6g29.o
 obj-$(CONFIG_MACH_MESON6_G18) += board-m6g18.o
 obj-$(CONFIG_MACH_MESON6_G18_RECOVERY) += board-m6g18.o
 obj-$(CONFIG_MACH_MESON6_G18_R2) += board-m6g18-r2.o
+obj-$(CONFIG_MACH_MESON6_G18_PIVOS_BAGEL) += board-m6g18-pivos-bagel.o
 obj-$(CONFIG_MACH_MESON6_G38) += board-m6g38-8203.o
 obj-$(CONFIG_MACH_MESON6_G38) += board-m6g38-8203-panel.o
 obj-$(CONFIG_MACH_MESON6_G31) += board-m6g31.o

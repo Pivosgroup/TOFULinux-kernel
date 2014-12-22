@@ -13,5 +13,11 @@ config MACH_MESON6_REF
 	default y 
 	help
           Support for Amlogic Meson6 reference development platform.
+          
+config MACH_MESON6_G18_PIVOS_BAGEL
+	depends on ARCH_MESON6
+	bool "Pivox XS platform"
+	help
+	Support for Pivos XS device
 
 endif # ARCH_MESON6
