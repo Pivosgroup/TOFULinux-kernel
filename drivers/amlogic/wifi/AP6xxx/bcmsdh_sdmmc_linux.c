@@ -293,12 +293,14 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 	bcmsdh_oob_intr_set(0);
 #endif	/* defined(OOB_INTR_ONLY) */
 #else
+#if defined(CONFIG_HAS_EARLYSUSPEND)
     /* add by jiamin */
     if (func->num == 2 && !sdioinfo[func->num].do_late_resume) {
         printk("===manual bcmsdh_remove===\n");
         bcmsdh_remove(&func->dev);
         sdioinfo[func->num].do_late_resume = 1;
     }
+#endif
 #endif
 	dhd_mmc_suspend = TRUE;
 	smp_mb();

@@ -5750,7 +5750,7 @@ int dhd_os_wake_lock(dhd_pub_t *pub)
 #ifdef CONFIG_HAS_WAKELOCK
 		if (!dhd->wakelock_counter)
 			wake_lock(&dhd->wl_wifi);
-#elif 1 && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
+#elif 0 && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
 		if (pm_dev)
 			pm_stay_awake(pm_dev);
 #endif
@@ -5785,7 +5785,7 @@ int dhd_os_wake_unlock(dhd_pub_t *pub)
 #ifdef CONFIG_HAS_WAKELOCK
 			if (!dhd->wakelock_counter)
 				wake_unlock(&dhd->wl_wifi);
-#elif 1 && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
+#elif 0 && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
 			if (pm_dev)
 				pm_relax(pm_dev);
 #endif
@@ -5813,7 +5813,7 @@ int dhd_os_check_wakelock(void *dhdp)
 	if (dhd && (wake_lock_active(&dhd->wl_wifi) ||
 		(wake_lock_active(&dhd->wl_wdwake))))
 		return 1;
-#elif 1 && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
+#elif 0 && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
 	if (dhd && (dhd->wakelock_counter > 0) && pm_dev)
 		return 1;
 #endif
