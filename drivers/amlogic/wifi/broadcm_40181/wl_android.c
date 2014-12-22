@@ -431,13 +431,13 @@ int wl_android_wifi_on(struct net_device *dev)
 	int ret = 0;
 	int retry = POWERUP_MAX_RETRY;
 
+	printk("%s in\n", __FUNCTION__);
 	if (!dev) {
 		ANDROID_ERROR(("%s: dev is null\n", __FUNCTION__));
 		return -EINVAL;
 	}
 
 	dhd_net_if_lock(dev);
-	printk("%s in\n", __FUNCTION__);
 	if (!g_wifi_on) {
 		do {
 			dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
@@ -453,14 +453,10 @@ int wl_android_wifi_on(struct net_device *dev)
 			goto exit;
 		}
 		ret = dhd_dev_reset(dev, FALSE);
-		if (ret)
-			goto err;
 		sdioh_start(NULL, 1);
 		if (!ret) {
-			if (dhd_dev_init_ioctl(dev) < 0) {
+			if (dhd_dev_init_ioctl(dev) < 0)
 				ret = -EFAULT;
-				goto err;
-			}
 		}
 #if defined(PROP_TXSTATUS) && !defined(PROP_TXSTATUS_VSDB)
 		dhd_wlfc_init(bcmsdh_get_drvdata());
@@ -469,15 +465,6 @@ int wl_android_wifi_on(struct net_device *dev)
 	}
 
 exit:
-	printk("%s: Success\n", __FUNCTION__);
-	dhd_net_if_unlock(dev);
-	return ret;
-
-err:
-	dhd_dev_reset(dev, TRUE);
-	sdioh_stop(NULL);
-	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
-	printk("%s: Failed\n", __FUNCTION__);
 	dhd_net_if_unlock(dev);
 
 	return ret;
@@ -487,13 +474,13 @@ int wl_android_wifi_off(struct net_device *dev)
 {
 	int ret = 0;
 
+	printk("%s in\n", __FUNCTION__);
 	if (!dev) {
 		ANDROID_TRACE(("%s: dev is null\n", __FUNCTION__));
 		return -EINVAL;
 	}
 
 	dhd_net_if_lock(dev);
-	printk("%s in\n", __FUNCTION__);
 	if (g_wifi_on) {
 #if defined(PROP_TXSTATUS) && !defined(PROP_TXSTATUS_VSDB)
 		dhd_wlfc_deinit(bcmsdh_get_drvdata());
@@ -503,7 +490,6 @@ int wl_android_wifi_off(struct net_device *dev)
 		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 		g_wifi_on = FALSE;
 	}
-	printk("%s out\n", __FUNCTION__);
 	dhd_net_if_unlock(dev);
 
 	return ret;
@@ -824,12 +810,442 @@ int wl_android_exit(void)
 void wl_android_post_init(void)
 {
 	if (!dhd_download_fw_on_driverload) {
-		sdioh_stop(NULL);
 		/* Call customer gpio to turn off power with WL_REG_ON signal */
 		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 		g_wifi_on = 0;
 	}
 }
+
+#if defined(RSSIAVG)
+void
+wl_free_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl)
+{
+	wl_rssi_cache_t *node, *cur, **rssi_head;
+	int i=0;
+
+	rssi_head = &rssi_cache_ctrl->m_cache_head;
+	node = *rssi_head;
+
+	for (;node;) {
+		ANDROID_INFO(("%s: Free %d with BSSID %pM\n",
+			__FUNCTION__, i, &node->BSSID));
+		cur = node;
+		node = cur->next;
+		kfree(cur);
+		i++;
+	}
+	*rssi_head = NULL;
+}
+
+void
+wl_delete_dirty_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl)
+{
+	wl_rssi_cache_t *node, *prev, **rssi_head;
+	int i = -1, tmp = 0;
+#if defined(BSSCACHE)
+	int max = BSSCACHE_LEN;
+#else
+	int max = RSSICACHE_LEN;
+#endif
+
+	rssi_head = &rssi_cache_ctrl->m_cache_head;
+	node = *rssi_head;
+	prev = node;
+	for (;node;) {
+		i++;
+		if (node->dirty >= max || node->dirty >= RSSICACHE_LEN) {
+			if (node == *rssi_head) {
+				tmp = 1;
+				*rssi_head = node->next;
+			} else {
+				tmp = 0;
+				prev->next = node->next;
+			}
+			ANDROID_INFO(("%s: Del %d with BSSID %pM\n",
+				__FUNCTION__, i, &node->BSSID));
+			kfree(node);
+			if (tmp == 1) {
+				node = *rssi_head;
+				prev = node;
+			} else {
+				node = prev->next;
+			}
+			continue;
+		}
+		prev = node;
+		node = node->next;
+	}
+}
+
+void
+wl_reset_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl)
+{
+	wl_rssi_cache_t *node, **rssi_head;
+
+	rssi_head = &rssi_cache_ctrl->m_cache_head;
+
+	/* reset dirty */
+	node = *rssi_head;
+	for (;node;) {
+		node->dirty += 1;
+		node = node->next;
+	}
+}
+
+void
+wl_update_connected_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, struct net_device *net)
+{
+	wl_rssi_cache_t *node, *prev, **rssi_head;
+	int j, k=0;
+	int rssi, error;
+	struct ether_addr bssid;
+
+	error = wldev_ioctl(net, WLC_GET_BSSID, &bssid, sizeof(bssid), false);
+	if (error)
+		return;
+	error = wldev_get_rssi(net, &rssi);
+	if (error)
+		return;
+
+	/* update RSSI */
+	rssi_head = &rssi_cache_ctrl->m_cache_head;
+	node = *rssi_head;
+	for (;node;) {
+		if (!memcmp(&node->BSSID, &bssid, ETHER_ADDR_LEN)) {
+			ANDROID_INFO(("%s: Update %d with BSSID %pM, RSSI=%d\n",
+				__FUNCTION__, k, &bssid, rssi));
+			for(j=0; j<RSSIAVG_LEN-1; j++)
+				node->RSSI[j] = node->RSSI[j+1];
+			node->RSSI[j] = rssi;
+			node->dirty = 0;
+			break;
+		}
+		prev = node;
+		node = node->next;
+		k++;
+	}
+}
+
+void
+wl_update_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, wl_scan_results_t *ss_list)
+{
+	wl_rssi_cache_t *node, *prev, *leaf, **rssi_head;
+	wl_bss_info_t *bi = NULL;
+	int i, j, k;
+
+	if (!ss_list->count)
+		return;
+
+	rssi_head = &rssi_cache_ctrl->m_cache_head;
+
+	/* update RSSI */
+	for (i = 0; i < ss_list->count; i++) {
+		node = *rssi_head;
+		prev = NULL;
+		k = 0;
+		bi = bi ? (wl_bss_info_t *)((uintptr)bi + dtoh32(bi->length)) : ss_list->bss_info;
+		for (;node;) {
+			if (!memcmp(&node->BSSID, &bi->BSSID, ETHER_ADDR_LEN)) {
+				ANDROID_INFO(("%s: Update %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
+					__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
+				for(j=0; j<RSSIAVG_LEN-1; j++)
+					node->RSSI[j] = node->RSSI[j+1];
+				node->RSSI[j] = dtoh16(bi->RSSI);
+				node->dirty = 0;
+				break;
+			}
+			prev = node;
+			node = node->next;
+			k++;
+		}
+
+		if (node)
+			continue;
+
+		leaf = kmalloc(sizeof(wl_rssi_cache_t), GFP_KERNEL);
+		if (!leaf) {
+			ANDROID_ERROR(("%s: Memory alloc failure %d\n",
+				__FUNCTION__, sizeof(wl_rssi_cache_t)));
+			return;
+		}
+		ANDROID_INFO(("%s: Add %d with cached BSSID %pM, RSSI=%d, SSID \"%s\" in the leaf\n",
+				__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
+
+		leaf->next = NULL;
+		leaf->dirty = 0;
+		memcpy(&leaf->BSSID, &bi->BSSID, ETHER_ADDR_LEN);
+		for (j=0; j<RSSIAVG_LEN; j++)
+			leaf->RSSI[j] = dtoh16(bi->RSSI);
+
+		if (!prev)
+			*rssi_head = leaf;
+		else
+			prev->next = leaf;
+	}
+}
+
+int16
+wl_get_avg_rssi(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, void *addr)
+{
+	wl_rssi_cache_t *node, **rssi_head;
+	int j, rssi_sum, rssi=-200;
+
+	rssi_head = &rssi_cache_ctrl->m_cache_head;
+
+	/* reset dirty */
+	node = *rssi_head;
+	for (;node;) {
+		if (!memcmp(&node->BSSID, addr, ETHER_ADDR_LEN)) {
+			rssi_sum = 0;
+			rssi = 0;
+			for (j=0; j<RSSIAVG_LEN; j++)
+				rssi_sum += node->RSSI[RSSIAVG_LEN-j-1];
+			rssi = rssi_sum / j;
+			break;
+		}
+		node = node->next;
+	}
+	if (rssi >= -2)
+		rssi = -2;
+	if (rssi == -200) {
+		ANDROID_ERROR(("%s: BSSID %pM does not in RSSI cache\n",
+		__FUNCTION__, addr));
+	}
+	return (int16)rssi;
+}
+#endif
+
+#if defined(RSSIOFFSET)
+uint chip;
+uint chiprev;
+
+int
+wl_update_rssi_offset(int rssi)
+{
+	if (chip == BCM4330_CHIP_ID && chiprev == BCM4330B2_CHIP_REV) {
+#if defined(RSSIOFFSET_NEW)
+		int j;
+		for (j=0; j<RSSI_OFFSET; j++) {
+			if (rssi - (RSSI_MIN+RSSI_INT*(j+1)) < 0)
+				break;
+		}
+		rssi += j;
+#else
+		rssi += RSSI_OFFSET;
+#endif
+	}
+	if (rssi >= -2)
+		rssi = -2;
+	return rssi;
+}
+#endif
+
+#if defined(BSSCACHE)
+#define WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN	32
+
+void
+wl_free_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl)
+{
+	wl_bss_cache_t *node, *cur, **bss_head;
+	int i=0;
+
+	ANDROID_TRACE(("%s called\n", __FUNCTION__));
+
+	bss_head = &bss_cache_ctrl->m_cache_head;
+	node = *bss_head;
+
+	for (;node;) {
+		ANDROID_TRACE(("%s: Free %d with BSSID %pM\n",
+			__FUNCTION__, i, &node->results.bss_info->BSSID));
+		cur = node;
+		node = cur->next;
+		kfree(cur);
+		i++;
+	}
+	*bss_head = NULL;
+}
+
+void
+wl_delete_dirty_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl)
+{
+	wl_bss_cache_t *node, *prev, **bss_head;
+	int i = -1, tmp = 0;
+
+	bss_head = &bss_cache_ctrl->m_cache_head;
+	node = *bss_head;
+	prev = node;
+	for (;node;) {
+		i++;
+		if (node->dirty >= BSSCACHE_LEN) {
+			if (node == *bss_head) {
+				tmp = 1;
+				*bss_head = node->next;
+			} else {
+				tmp = 0;
+				prev->next = node->next;
+			}
+			ANDROID_TRACE(("%s: Del %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
+				__FUNCTION__, i, &node->results.bss_info->BSSID,
+				dtoh16(node->results.bss_info->RSSI), node->results.bss_info->SSID));
+			kfree(node);
+			if (tmp == 1) {
+				node = *bss_head;
+				prev = node;
+			} else {
+				node = prev->next;
+			}
+			continue;
+		}
+		prev = node;
+		node = node->next;
+	}
+}
+
+void
+wl_reset_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl)
+{
+	wl_bss_cache_t *node, **bss_head;
+
+	bss_head = &bss_cache_ctrl->m_cache_head;
+
+	/* reset dirty */
+	node = *bss_head;
+	for (;node;) {
+		node->dirty += 1;
+		node = node->next;
+	}
+}
+
+void
+wl_update_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl, wl_scan_results_t *ss_list)
+{
+	wl_bss_cache_t *node, *prev, *leaf, *tmp, **bss_head;
+	wl_bss_info_t *bi = NULL;
+	int i, k=0;
+
+	if (!ss_list->count)
+		return;
+
+	bss_head = &bss_cache_ctrl->m_cache_head;
+
+	for (i=0; i < ss_list->count; i++) {
+		node = *bss_head;
+		prev = NULL;
+		bi = bi ? (wl_bss_info_t *)((uintptr)bi + dtoh32(bi->length)) : ss_list->bss_info;
+		
+		for (;node;) {
+			if (!memcmp(&node->results.bss_info->BSSID, &bi->BSSID, ETHER_ADDR_LEN)) {
+ 				tmp = node;
+				leaf = kmalloc(dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN, GFP_KERNEL);
+				if (!leaf) {
+					ANDROID_ERROR(("%s: Memory alloc failure %d and keep old BSS info\n",
+						__FUNCTION__, dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN));
+					break;
+				}
+
+				memcpy(leaf->results.bss_info, bi, dtoh32(bi->length));
+				leaf->next = node->next;
+				leaf->dirty = 0;
+				leaf->results.count = 1;
+				leaf->results.version = ss_list->version;
+				ANDROID_TRACE(("%s: Update %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
+					__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
+				if (!prev)
+					*bss_head = leaf;
+				else
+					prev->next = leaf;
+				node = leaf;
+				prev = node;
+
+				kfree(tmp);
+				k++;
+				break;
+			}
+			prev = node;
+			node = node->next;
+		}
+
+		if (node)
+			continue;
+
+		leaf = kmalloc(dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN, GFP_KERNEL);
+		if (!leaf) {
+			ANDROID_ERROR(("%s: Memory alloc failure %d\n", __FUNCTION__,
+				dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN));
+			return;
+		}
+		ANDROID_TRACE(("%s: Add %d with cached BSSID %pM, RSSI=%d, SSID \"%s\" in the leaf\n",
+				__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
+
+		memcpy(leaf->results.bss_info, bi, dtoh32(bi->length));
+		leaf->next = NULL;
+		leaf->dirty = 0;
+		leaf->results.count = 1;
+		leaf->results.version = ss_list->version;
+		k++;
+
+		if (!prev)
+			*bss_head = leaf;
+		else
+			prev->next = leaf;
+	}
+}
+
+void
+wl_run_bss_cache_timer(wl_bss_cache_ctrl_t *bss_cache_ctrl, int kick_off)
+{
+	struct timer_list **timer;
+
+	timer = &bss_cache_ctrl->m_timer;
+
+	if (*timer) {
+		if (kick_off) {
+			(*timer)->expires = jiffies + BSSCACHE_TIME * HZ / 1000;
+			add_timer(*timer);
+			ANDROID_TRACE(("%s: timer starts\n", __FUNCTION__));
+		} else {
+			del_timer_sync(*timer);
+			ANDROID_TRACE(("%s: timer stops\n", __FUNCTION__));
+		}
+	}
+}
+
+void
+wl_set_bss_cache_timer_flag(ulong data)
+{
+	wl_bss_cache_ctrl_t *bss_cache_ctrl = (wl_bss_cache_ctrl_t *)data;
+
+	bss_cache_ctrl->m_timer_expired = 1;
+	ANDROID_TRACE(("%s called\n", __FUNCTION__));
+}
+
+void
+wl_release_bss_cache_ctrl(wl_bss_cache_ctrl_t *bss_cache_ctrl)
+{
+	ANDROID_TRACE(("%s:\n", __FUNCTION__));
+	wl_free_bss_cache(bss_cache_ctrl);
+	wl_run_bss_cache_timer(bss_cache_ctrl, 0);
+	if (bss_cache_ctrl->m_timer) {
+		kfree(bss_cache_ctrl->m_timer);
+	}
+}
+
+void
+wl_init_bss_cache_ctrl(wl_bss_cache_ctrl_t *bss_cache_ctrl)
+{
+	ANDROID_TRACE(("%s:\n", __FUNCTION__));
+	bss_cache_ctrl->m_timer_expired = 0;
+
+	bss_cache_ctrl->m_timer = kmalloc(sizeof(struct timer_list), GFP_KERNEL);
+	if (!bss_cache_ctrl->m_timer) {
+		ANDROID_ERROR(("%s: Memory alloc failure\n", __FUNCTION__ ));
+		return;
+	}
+	init_timer(bss_cache_ctrl->m_timer);
+	bss_cache_ctrl->m_timer->function = (void *)wl_set_bss_cache_timer_flag;
+	bss_cache_ctrl->m_timer->data = (ulong)bss_cache_ctrl;
+}
+#endif
 
 /**
  * Functions for Android WiFi card detection
@@ -1044,506 +1460,3 @@ static void wifi_del_dev(void)
 	platform_driver_unregister(&wifi_device_legacy);
 }
 #endif /* defined(CONFIG_WIFI_CONTROL_FUNC) */
-
-#if defined(RSSIAVG)
-void
-wl_free_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl)
-{
-	wl_rssi_cache_t *node, *cur, **rssi_head;
-	int i=0;
-
-	rssi_head = &rssi_cache_ctrl->m_cache_head;
-	node = *rssi_head;
-
-	for (;node;) {
-		ANDROID_INFO(("%s: Free %d with BSSID %pM\n",
-			__FUNCTION__, i, &node->BSSID));
-		cur = node;
-		node = cur->next;
-		kfree(cur);
-		i++;
-	}
-	*rssi_head = NULL;
-}
-
-void
-wl_delete_dirty_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl)
-{
-	wl_rssi_cache_t *node, *prev, **rssi_head;
-	int i = -1, tmp = 0;
-#if defined(BSSCACHE)
-	int max = BSSCACHE_LEN;
-#else
-	int max = RSSICACHE_LEN;
-#endif
-
-	rssi_head = &rssi_cache_ctrl->m_cache_head;
-	node = *rssi_head;
-	prev = node;
-	for (;node;) {
-		i++;
-		if (node->dirty >= max || node->dirty >= RSSICACHE_LEN) {
-			if (node == *rssi_head) {
-				tmp = 1;
-				*rssi_head = node->next;
-			} else {
-				tmp = 0;
-				prev->next = node->next;
-			}
-			ANDROID_INFO(("%s: Del %d with BSSID %pM\n",
-				__FUNCTION__, i, &node->BSSID));
-			kfree(node);
-			if (tmp == 1) {
-				node = *rssi_head;
-				prev = node;
-			} else {
-				node = prev->next;
-			}
-			continue;
-		}
-		prev = node;
-		node = node->next;
-	}
-}
-
-void
-wl_delete_disconnected_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, u8 *bssid)
-{
-	wl_rssi_cache_t *node, *prev, **rssi_head;
-	int i = -1, tmp = 0;
-
-	rssi_head = &rssi_cache_ctrl->m_cache_head;
-	node = *rssi_head;
-	prev = node;
-	for (;node;) {
-		i++;
-		if (!memcmp(&node->BSSID, bssid, ETHER_ADDR_LEN)) {
-			if (node == *rssi_head) {
-				tmp = 1;
-				*rssi_head = node->next;
-			} else {
-				tmp = 0;
-				prev->next = node->next;
-			}
-			ANDROID_INFO(("%s: Del %d with BSSID %pM\n",
-				__FUNCTION__, i, &node->BSSID));
-			kfree(node);
-			if (tmp == 1) {
-				node = *rssi_head;
-				prev = node;
-			} else {
-				node = prev->next;
-			}
-			continue;
-		}
-		prev = node;
-		node = node->next;
-	}
-}
-
-void
-wl_reset_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl)
-{
-	wl_rssi_cache_t *node, **rssi_head;
-
-	rssi_head = &rssi_cache_ctrl->m_cache_head;
-
-	/* reset dirty */
-	node = *rssi_head;
-	for (;node;) {
-		node->dirty += 1;
-		node = node->next;
-	}
-}
-
-void
-wl_update_connected_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, struct net_device *net)
-{
-	wl_rssi_cache_t *node, *prev, **rssi_head;
-	int j, k=0;
-	int rssi, error;
-	struct ether_addr bssid;
-
-	error = wldev_ioctl(net, WLC_GET_BSSID, &bssid, sizeof(bssid), false);
-	if (error)
-		return;
-	error = wldev_get_rssi(net, &rssi);
-	if (error)
-		return;
-
-	/* update RSSI */
-	rssi_head = &rssi_cache_ctrl->m_cache_head;
-	node = *rssi_head;
-	for (;node;) {
-		if (!memcmp(&node->BSSID, &bssid, ETHER_ADDR_LEN)) {
-			ANDROID_INFO(("%s: Update %d with BSSID %pM, RSSI=%d\n",
-				__FUNCTION__, k, &bssid, rssi));
-			for(j=0; j<RSSIAVG_LEN-1; j++)
-				node->RSSI[j] = node->RSSI[j+1];
-			node->RSSI[j] = rssi;
-			node->dirty = 0;
-			break;
-		}
-		prev = node;
-		node = node->next;
-		k++;
-	}
-}
-
-void
-wl_update_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, wl_scan_results_t *ss_list)
-{
-	wl_rssi_cache_t *node, *prev, *leaf, **rssi_head;
-	wl_bss_info_t *bi = NULL;
-	int i, j, k;
-
-	if (!ss_list->count)
-		return;
-
-	rssi_head = &rssi_cache_ctrl->m_cache_head;
-
-	/* update RSSI */
-	for (i = 0; i < ss_list->count; i++) {
-		node = *rssi_head;
-		prev = NULL;
-		k = 0;
-		bi = bi ? (wl_bss_info_t *)((uintptr)bi + dtoh32(bi->length)) : ss_list->bss_info;
-		for (;node;) {
-			if (!memcmp(&node->BSSID, &bi->BSSID, ETHER_ADDR_LEN)) {
-				ANDROID_INFO(("%s: Update %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
-					__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
-				for(j=0; j<RSSIAVG_LEN-1; j++)
-					node->RSSI[j] = node->RSSI[j+1];
-				node->RSSI[j] = dtoh16(bi->RSSI);
-				node->dirty = 0;
-				break;
-			}
-			prev = node;
-			node = node->next;
-			k++;
-		}
-
-		if (node)
-			continue;
-
-		leaf = kmalloc(sizeof(wl_rssi_cache_t), GFP_KERNEL);
-		if (!leaf) {
-			ANDROID_ERROR(("%s: Memory alloc failure %d\n",
-				__FUNCTION__, sizeof(wl_rssi_cache_t)));
-			return;
-		}
-		ANDROID_INFO(("%s: Add %d with cached BSSID %pM, RSSI=%d, SSID \"%s\" in the leaf\n",
-				__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
-
-		leaf->next = NULL;
-		leaf->dirty = 0;
-		memcpy(&leaf->BSSID, &bi->BSSID, ETHER_ADDR_LEN);
-		for (j=0; j<RSSIAVG_LEN; j++)
-			leaf->RSSI[j] = dtoh16(bi->RSSI);
-
-		if (!prev)
-			*rssi_head = leaf;
-		else
-			prev->next = leaf;
-	}
-}
-
-int16
-wl_get_avg_rssi(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, void *addr)
-{
-	wl_rssi_cache_t *node, **rssi_head;
-	int j, rssi_sum, rssi=-200;
-
-	rssi_head = &rssi_cache_ctrl->m_cache_head;
-
-	/* reset dirty */
-	node = *rssi_head;
-	for (;node;) {
-		if (!memcmp(&node->BSSID, addr, ETHER_ADDR_LEN)) {
-			rssi_sum = 0;
-			rssi = 0;
-			for (j=0; j<RSSIAVG_LEN; j++)
-				rssi_sum += node->RSSI[RSSIAVG_LEN-j-1];
-			rssi = rssi_sum / j;
-			break;
-		}
-		node = node->next;
-	}
-	if (rssi >= -2)
-		rssi = -2;
-	if (rssi == -200) {
-		ANDROID_ERROR(("%s: BSSID %pM does not in RSSI cache\n",
-		__FUNCTION__, addr));
-	}
-	return (int16)rssi;
-}
-#endif
-
-#if defined(RSSIOFFSET)
-int
-wl_update_rssi_offset(int rssi)
-{
-	uint chip, chiprev;
-
-	chip = dhd_bus_chip_id(bcmsdh_get_drvdata());
-	chiprev = dhd_bus_chiprev_id(bcmsdh_get_drvdata());
-	if (chip == BCM4330_CHIP_ID && chiprev == BCM4330B2_CHIP_REV) {
-#if defined(RSSIOFFSET_NEW)
-		int j;
-		for (j=0; j<RSSI_OFFSET; j++) {
-			if (rssi - (RSSI_MIN+RSSI_INT*(j+1)) < 0)
-				break;
-		}
-		rssi += j;
-#else
-		rssi += RSSI_OFFSET;
-#endif
-	}
-	if (rssi >= -2)
-		rssi = -2;
-	return rssi;
-}
-#endif
-
-#if defined(BSSCACHE)
-#define WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN	32
-
-void
-wl_free_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl)
-{
-	wl_bss_cache_t *node, *cur, **bss_head;
-	int i=0;
-
-	ANDROID_TRACE(("%s called\n", __FUNCTION__));
-
-	bss_head = &bss_cache_ctrl->m_cache_head;
-	node = *bss_head;
-
-	for (;node;) {
-		ANDROID_TRACE(("%s: Free %d with BSSID %pM\n",
-			__FUNCTION__, i, &node->results.bss_info->BSSID));
-		cur = node;
-		node = cur->next;
-		kfree(cur);
-		i++;
-	}
-	*bss_head = NULL;
-}
-
-void
-wl_delete_dirty_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl)
-{
-	wl_bss_cache_t *node, *prev, **bss_head;
-	int i = -1, tmp = 0;
-
-	bss_head = &bss_cache_ctrl->m_cache_head;
-	node = *bss_head;
-	prev = node;
-	for (;node;) {
-		i++;
-		if (node->dirty >= BSSCACHE_LEN) {
-			if (node == *bss_head) {
-				tmp = 1;
-				*bss_head = node->next;
-			} else {
-				tmp = 0;
-				prev->next = node->next;
-			}
-			ANDROID_TRACE(("%s: Del %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
-				__FUNCTION__, i, &node->results.bss_info->BSSID,
-				dtoh16(node->results.bss_info->RSSI), node->results.bss_info->SSID));
-			kfree(node);
-			if (tmp == 1) {
-				node = *bss_head;
-				prev = node;
-			} else {
-				node = prev->next;
-			}
-			continue;
-		}
-		prev = node;
-		node = node->next;
-	}
-}
-
-void
-wl_delete_disconnected_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl, u8 *bssid)
-{
-	wl_bss_cache_t *node, *prev, **bss_head;
-	int i = -1, tmp = 0;
-
-	bss_head = &bss_cache_ctrl->m_cache_head;
-	node = *bss_head;
-	prev = node;
-	for (;node;) {
-		i++;
-		if (!memcmp(&node->results.bss_info->BSSID, bssid, ETHER_ADDR_LEN)) {
-			if (node == *bss_head) {
-				tmp = 1;
-				*bss_head = node->next;
-			} else {
-				tmp = 0;
-				prev->next = node->next;
-			}
-			ANDROID_TRACE(("%s: Del %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
-				__FUNCTION__, i, &node->results.bss_info->BSSID,
-				dtoh16(node->results.bss_info->RSSI), node->results.bss_info->SSID));
-			kfree(node);
-			if (tmp == 1) {
-				node = *bss_head;
-				prev = node;
-			} else {
-				node = prev->next;
-			}
-			continue;
-		}
-		prev = node;
-		node = node->next;
-	}
-}
-
-void
-wl_reset_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl)
-{
-	wl_bss_cache_t *node, **bss_head;
-
-	bss_head = &bss_cache_ctrl->m_cache_head;
-
-	/* reset dirty */
-	node = *bss_head;
-	for (;node;) {
-		node->dirty += 1;
-		node = node->next;
-	}
-}
-
-void
-wl_update_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl, wl_scan_results_t *ss_list)
-{
-	wl_bss_cache_t *node, *prev, *leaf, *tmp, **bss_head;
-	wl_bss_info_t *bi = NULL;
-	int i, k=0;
-
-	if (!ss_list->count)
-		return;
-
-	bss_head = &bss_cache_ctrl->m_cache_head;
-
-	for (i=0; i < ss_list->count; i++) {
-		node = *bss_head;
-		prev = NULL;
-		bi = bi ? (wl_bss_info_t *)((uintptr)bi + dtoh32(bi->length)) : ss_list->bss_info;
-		
-		for (;node;) {
-			if (!memcmp(&node->results.bss_info->BSSID, &bi->BSSID, ETHER_ADDR_LEN)) {
- 				tmp = node;
-				leaf = kmalloc(dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN, GFP_KERNEL);
-				if (!leaf) {
-					ANDROID_ERROR(("%s: Memory alloc failure %d and keep old BSS info\n",
-						__FUNCTION__, dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN));
-					break;
-				}
-
-				memcpy(leaf->results.bss_info, bi, dtoh32(bi->length));
-				leaf->next = node->next;
-				leaf->dirty = 0;
-				leaf->results.count = 1;
-				leaf->results.version = ss_list->version;
-				ANDROID_TRACE(("%s: Update %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
-					__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
-				if (!prev)
-					*bss_head = leaf;
-				else
-					prev->next = leaf;
-				node = leaf;
-				prev = node;
-
-				kfree(tmp);
-				k++;
-				break;
-			}
-			prev = node;
-			node = node->next;
-		}
-
-		if (node)
-			continue;
-
-		leaf = kmalloc(dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN, GFP_KERNEL);
-		if (!leaf) {
-			ANDROID_ERROR(("%s: Memory alloc failure %d\n", __FUNCTION__,
-				dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN));
-			return;
-		}
-		ANDROID_TRACE(("%s: Add %d with cached BSSID %pM, RSSI=%d, SSID \"%s\" in the leaf\n",
-				__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
-
-		memcpy(leaf->results.bss_info, bi, dtoh32(bi->length));
-		leaf->next = NULL;
-		leaf->dirty = 0;
-		leaf->results.count = 1;
-		leaf->results.version = ss_list->version;
-		k++;
-
-		if (!prev)
-			*bss_head = leaf;
-		else
-			prev->next = leaf;
-	}
-}
-
-void
-wl_run_bss_cache_timer(wl_bss_cache_ctrl_t *bss_cache_ctrl, int kick_off)
-{
-	struct timer_list **timer;
-
-	timer = &bss_cache_ctrl->m_timer;
-
-	if (*timer) {
-		if (kick_off) {
-			(*timer)->expires = jiffies + BSSCACHE_TIME * HZ / 1000;
-			add_timer(*timer);
-			ANDROID_TRACE(("%s: timer starts\n", __FUNCTION__));
-		} else {
-			del_timer_sync(*timer);
-			ANDROID_TRACE(("%s: timer stops\n", __FUNCTION__));
-		}
-	}
-}
-
-void
-wl_set_bss_cache_timer_flag(ulong data)
-{
-	wl_bss_cache_ctrl_t *bss_cache_ctrl = (wl_bss_cache_ctrl_t *)data;
-
-	bss_cache_ctrl->m_timer_expired = 1;
-	ANDROID_TRACE(("%s called\n", __FUNCTION__));
-}
-
-void
-wl_release_bss_cache_ctrl(wl_bss_cache_ctrl_t *bss_cache_ctrl)
-{
-	ANDROID_TRACE(("%s:\n", __FUNCTION__));
-	wl_free_bss_cache(bss_cache_ctrl);
-	wl_run_bss_cache_timer(bss_cache_ctrl, 0);
-	if (bss_cache_ctrl->m_timer) {
-		kfree(bss_cache_ctrl->m_timer);
-	}
-}
-
-void
-wl_init_bss_cache_ctrl(wl_bss_cache_ctrl_t *bss_cache_ctrl)
-{
-	ANDROID_TRACE(("%s:\n", __FUNCTION__));
-	bss_cache_ctrl->m_timer_expired = 0;
-
-	bss_cache_ctrl->m_timer = kmalloc(sizeof(struct timer_list), GFP_KERNEL);
-	if (!bss_cache_ctrl->m_timer) {
-		ANDROID_ERROR(("%s: Memory alloc failure\n", __FUNCTION__ ));
-		return;
-	}
-	init_timer(bss_cache_ctrl->m_timer);
-	bss_cache_ctrl->m_timer->function = (void *)wl_set_bss_cache_timer_flag;
-	bss_cache_ctrl->m_timer->data = (ulong)bss_cache_ctrl;
-}
-#endif

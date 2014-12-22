@@ -339,7 +339,6 @@ uint dhd_download_fw_on_driverload = TRUE;
  */
 char firmware_path[MOD_PARAM_PATHLEN];
 char nvram_path[MOD_PARAM_PATHLEN];
-char config_path[MOD_PARAM_PATHLEN];
 
 /* information string to keep firmware, chio, cheip version info visiable from log */
 char info_string[MOD_PARAM_INFOLEN];
@@ -366,9 +365,6 @@ module_param(dhd_msg_level, int, 0);
 #if defined(CONFIG_WIRELESS_EXT)
 module_param(iw_msg_level, int, 0);
 #endif
-#ifdef WL_CFG80211
-module_param(wl_dbg_level, int, 0);
-#endif
 module_param(android_msg_level, int, 0);
 
 /* Disable Prop tx */
@@ -377,7 +373,6 @@ module_param(disable_proptx, int, 0644);
 /* load firmware and/or nvram values from the filesystem */
 module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0660);
 module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0);
-module_param_string(config_path, config_path, MOD_PARAM_PATHLEN, 0);
 
 /* Watchdog interval */
 uint dhd_watchdog_ms = 10;
@@ -1439,10 +1434,10 @@ dhd_sendpkt(dhd_pub_t *dhdp, int ifidx, void *pktbuf)
 	else {
 		dhd_os_wlfc_unblock(dhdp);
 		/* non-proptxstatus way */
-		ret = dhd_bus_txdata(dhdp->bus, pktbuf, FALSE);
+		ret = dhd_bus_txdata(dhdp->bus, pktbuf);
 	}
 #else
-	ret = dhd_bus_txdata(dhdp->bus, pktbuf, FALSE);
+	ret = dhd_bus_txdata(dhdp->bus, pktbuf);
 #endif /* PROP_TXSTATUS */
 
 	return ret;
@@ -2679,7 +2674,7 @@ dhd_open(struct net_device *net)
 	if (strlen(firmware_path) != 0) {
 		if (firmware_path[strlen(firmware_path)-1] == '\n')
 			firmware_path[strlen(firmware_path)-1] = '\0';
-		COPY_FW_PATH_BY_CHIP(dhd->pub.bus, fw_path, firmware_path);
+		COPY_FW_PATH_BY_CHIP( dhd->pub.bus, fw_path, firmware_path);
 	}
 
 
@@ -2950,10 +2945,6 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 		strncpy(nv_path, nvram_path, sizeof(nv_path) -1);
 		nv_path[sizeof(nv_path) -1] = '\0';
 	}
-	if (strlen(config_path) != 0) {
-		strncpy(conf_path, config_path, sizeof(conf_path) -1);
-		conf_path[sizeof(conf_path) -1] = '\0';
-	}
 
 	/* Allocate etherdev, including space for private structure */
 	if (!(net = alloc_etherdev(sizeof(dhd)))) {
@@ -3063,6 +3054,9 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 		goto fail;
 	}
 	dhd_state |= DHD_ATTACH_STATE_PROT_ATTACH;
+#if defined(RSSIOFFSET) || 1
+	GET_CHIP_VER(bus, &chip, &chiprev);
+#endif
 
 #ifdef WL_CFG80211
 	/* Attach and link in the cfg80211 */
@@ -3207,9 +3201,9 @@ dhd_bus_start(dhd_pub_t *dhdp)
 		(nv_path != NULL) && (nv_path[0] != '\0')) {
 		/* wake lock moved to dhdsdio_download_firmware */
 		if (!(dhd_bus_download_firmware(dhd->pub.bus, dhd->pub.osh,
-			fw_path, nv_path, conf_path))) {
-			DHD_ERROR(("%s: dhdsdio_probe_download failed. firmware = %s nvram = %s config = %s\n",
-				__FUNCTION__, fw_path, nv_path, conf_path));
+			fw_path, nv_path))) {
+			DHD_ERROR(("%s: dhdsdio_probe_download failed. firmware = %s nvram = %s\n",
+				__FUNCTION__, fw_path, nv_path));
 #ifdef DHDTHREAD
 			if (dhd->threads_only)
 				dhd_os_sdunlock(dhdp);
@@ -3239,7 +3233,7 @@ dhd_bus_start(dhd_pub_t *dhdp)
 #endif /* DHDTHREAD */
 		return ret;
 	}
-	bcmsdh_set_drvdata(dhdp); // terence 20130427: fix for null pointer issue
+	bcmsdh_set_drvdata(dhdp);
 #if defined(OOB_INTR_ONLY)
 	/* Host registration for OOB interrupt */
 	if (bcmsdh_register_oob_intr(dhdp)) {
@@ -3389,7 +3383,6 @@ dhd_get_concurrent_capabilites(dhd_pub_t *dhd)
 	return 0;
 }
 #endif 
-
 int
 dhd_preinit_ioctls(dhd_pub_t *dhd)
 {
@@ -3451,7 +3444,6 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #ifdef GET_CUSTOM_MAC_ENABLE
 	struct ether_addr ea_addr;
 #endif /* GET_CUSTOM_MAC_ENABLE */
-	wl_country_t cspec = {{"ALL"}, 0, {"ALL"}};
 #ifdef DISABLE_11N
 	uint32 nmode = 0;
 #else
@@ -3590,27 +3582,11 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		dhd->op_mode,
 		MAC2STRDBG(dhd->mac.octet)));
 	/* Set Country code  */
-	if (dhd->dhd_cspec.ccode[0] == 0) {
-		memcpy(&dhd->dhd_cspec, &cspec, sizeof(wl_country_t));
-	}
 	if (dhd->dhd_cspec.ccode[0] != 0) {
-		printf("Set country %s, revision %d\n", dhd->dhd_cspec.ccode, dhd->dhd_cspec.rev);
 		bcm_mkiovar("country", (char *)&dhd->dhd_cspec,
 			sizeof(wl_country_t), iovbuf, sizeof(iovbuf));
-		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0)) < 0) {
-			printf("%s: country code setting failed and set to default country %s\n",
-				__FUNCTION__, cspec.ccode);
-			memcpy(&dhd->dhd_cspec, &cspec, sizeof(wl_country_t));
-			bcm_mkiovar("country", (char *)&dhd->dhd_cspec,
-				sizeof(wl_country_t), iovbuf, sizeof(iovbuf));
-			dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
-		}
-		memset(&cspec, 0, sizeof(wl_country_t));
-		bcm_mkiovar("country", NULL, 0, (char*)&cspec, sizeof(cspec));
-		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, &cspec, sizeof(cspec), FALSE, 0)) < 0)
-			printf("%s: country code getting failed\n", __FUNCTION__);
-		else
-			printf("Country code: %s (%s/%d)\n", cspec.country_abbrev, cspec.ccode, cspec.rev);
+		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0)) < 0)
+			DHD_ERROR(("%s: country code setting failed\n", __FUNCTION__));
 	}
 
 	/* Set Listen Interval */
@@ -5564,7 +5540,6 @@ void dhd_set_version_info(dhd_pub_t *dhdp, char *fw)
 
 	i = snprintf(info_string, sizeof(info_string),
 		"  Driver: %s\n  Firmware: %s ", EPI_VERSION_STR, fw);
-	printf("%s\n", info_string);
 
 	if (!dhdp)
 		return;

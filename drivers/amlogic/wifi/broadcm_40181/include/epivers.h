@@ -44,12 +44,12 @@
 
 /* Driver Version String, ASCII, 32 chars max */
 #ifdef BCMINTERNAL
-#define	EPI_VERSION_STR		"1.28.23.5 (r BCMINT)"
+#define	EPI_VERSION_STR		"1.28.23.1 (r BCMINT)"
 #else
 #ifdef WLTEST
-#define	EPI_VERSION_STR		"1.28.23.5 (r WLTEST)"
+#define	EPI_VERSION_STR		"1.28.23.1 (r WLTEST)"
 #else
-#define	EPI_VERSION_STR		"1.28.23.5 (r)"
+#define	EPI_VERSION_STR		"1.28.23.1 (r)"
 #endif
 #endif /* BCMINTERNAL */
 

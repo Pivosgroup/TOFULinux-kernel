@@ -274,9 +274,6 @@ typedef struct athost_wl_status_info {
 	/* Timestamp to compute how long to defer borrowing for */
 	uint32  borrow_defer_timestamp;
 
-	// terence 20130306: Fix for deadlock
-	bool wlfc_locked;
-
 } athost_wl_status_info_t;
 
 int dhd_wlfc_enable(dhd_pub_t *dhd);

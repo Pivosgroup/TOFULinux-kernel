@@ -534,17 +534,26 @@ typedef struct {
 #endif
 
 
+#include <linux/sched.h>
 #define PROC_START(thread_func, owner, tsk_ctl, flags) \
 { \
+	int i = 0;	\
 	sema_init(&((tsk_ctl)->sema), 0); \
 	init_completion(&((tsk_ctl)->completed)); \
 	(tsk_ctl)->parent = owner; \
 	(tsk_ctl)->terminated = FALSE; \
+	do {	\
 	(tsk_ctl)->thr_pid = kernel_thread(thread_func, tsk_ctl, flags); \
-	DBG_THR(("%s thr:%lx created\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \
+		if ((tsk_ctl)->thr_pid <= 0){ \
+			DBG_THR(("======= thread create fail %d : pid=%lx ======", i+1, (tsk_ctl)->thr_pid));	\
+			flush_signals(current);	\
+		}	\
+	}	while (((tsk_ctl)->thr_pid <= 0) && (++i < 3));	\
 	if ((tsk_ctl)->thr_pid > 0) \
 		wait_for_completion(&((tsk_ctl)->completed)); \
-	DBG_THR(("%s thr:%lx started\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \
+	DBG_THR(("%s thr:%lx started, retry %d times\n", __FUNCTION__, (tsk_ctl)->thr_pid, i)); \
+	if ((i > 0) && ((tsk_ctl)->thr_pid > 0))	\
+		DBG_THR(("======= thread recovery success ======"));	\
 }
 
 #ifdef USE_KTHREAD_API

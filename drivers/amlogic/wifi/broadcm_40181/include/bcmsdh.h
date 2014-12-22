@@ -221,10 +221,7 @@ extern int bcmsdh_set_drvdata(void * dhdp);
 extern int bcmsdh_register_oob_intr(void * dhdp);
 extern void bcmsdh_unregister_oob_intr(void);
 extern void bcmsdh_oob_intr_set(bool enable);
-#endif
-#if defined(HW_OOB)
-void bcmsdh_config_hw_oob_intr(bcmsdh_info_t *sdh, uint chip);
-#endif
+#endif 
 
 /* Function to pass device-status bits to DHD. */
 extern uint32 bcmsdh_get_dstatus(void *sdh);

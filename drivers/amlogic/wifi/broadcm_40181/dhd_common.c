@@ -76,8 +76,6 @@ int dhd_msg_level = DHD_ERROR_VAL;
 
 char fw_path[MOD_PARAM_PATHLEN];
 char nv_path[MOD_PARAM_PATHLEN];
-// terence 20130703: customer can add some parameters to configure driver
-char conf_path[MOD_PARAM_PATHLEN];
 
 #ifdef SOFTAP
 char fw_path2[MOD_PARAM_PATHLEN];
@@ -201,11 +199,6 @@ dhd_common_init(osl_t *osh)
 #else /* CONFIG_BCMDHD_NVRAM_PATH */
 	nv_path[0] = '\0';
 #endif /* CONFIG_BCMDHD_NVRAM_PATH */
-#ifdef CONFIG_BCMDHD_CONFIG_PATH
-	bcm_strncpy_s(conf_path, sizeof(conf_path), CONFIG_BCMDHD_CONFIG_PATH, MOD_PARAM_PATHLEN-1);
-#else /* CONFIG_BCMDHD_CONFIG_PATH */
-	conf_path[0] = '\0';
-#endif /* CONFIG_BCMDHD_CONFIG_PATH */
 #ifdef SOFTAP
 	fw_path2[0] = '\0';
 #endif
@@ -334,17 +327,17 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 	case IOV_SVAL(IOV_WLMSGLEVEL):
 #if defined(CONFIG_WIRELESS_EXT)
 		if (int_val & DHD_IW_VAL) {
-			iw_msg_level = (uint)(int_val & 0xFFFF);
+			iw_msg_level = int_val;
 			printk("iw_msg_level=0x%x\n", iw_msg_level);
 		} else
 #endif
 #ifdef WL_CFG80211
 		if (int_val & DHD_CFG_VAL) {
-			wl_cfg80211_enable_trace((u32)(int_val & 0xFFFF));
+			wl_cfg80211_enable_trace(int_val);
 		} else
 #endif
 		{
-			android_msg_level = (uint)int_val;
+			android_msg_level = int_val;
 			printk("android_msg_level=0x%x\n", android_msg_level);
 		}
 		break;

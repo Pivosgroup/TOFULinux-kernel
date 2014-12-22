@@ -117,12 +117,6 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define WPA_CIPHER_WEP_104	5	/* WEP (104-bit) */
 #define WPA_CIPHER_BIP		6	/* WEP (104-bit) */
 #define WPA_CIPHER_TPK		7	/* Group addressed traffic not allowed */
-#ifdef BCMWAPI_WPI
-#define WAPI_CIPHER_NONE	WPA_CIPHER_NONE
-#define WAPI_CIPHER_SMS4	11
-
-#define WAPI_CSE_WPI_SMS4	1
-#endif /* BCMWAPI_WPI */
 
 
 #define IS_WPA_CIPHER(cipher)	((cipher) == WPA_CIPHER_NONE || \
@@ -132,18 +126,6 @@ typedef BWL_PRE_PACKED_STRUCT struct
 				 (cipher) == WPA_CIPHER_AES_OCB || \
 				 (cipher) == WPA_CIPHER_AES_CCM || \
 				 (cipher) == WPA_CIPHER_TPK)
-
-#ifdef BCMWAPI_WAI
-#define IS_WAPI_CIPHER(cipher)	((cipher) == WAPI_CIPHER_NONE || \
-				 (cipher) == WAPI_CSE_WPI_SMS4)
-
-/* convert WAPI_CSE_WPI_XXX to WAPI_CIPHER_XXX */
-#define WAPI_CSE_WPI_2_CIPHER(cse) ((cse) == WAPI_CSE_WPI_SMS4 ? \
-				WAPI_CIPHER_SMS4 : WAPI_CIPHER_NONE)
-
-#define WAPI_CIPHER_2_CSE_WPI(cipher) ((cipher) == WAPI_CIPHER_SMS4 ? \
-				WAPI_CSE_WPI_SMS4 : WAPI_CIPHER_NONE)
-#endif /* BCMWAPI_WAI */
 
 
 /* WPA TKIP countermeasures parameters */
@@ -184,19 +166,6 @@ typedef BWL_PRE_PACKED_STRUCT struct
 
 #define	WPA_CAP_WPA2_PREAUTH		RSN_CAP_PREAUTH
 
-#ifdef BCMWAPI_WAI
-#define WAPI_CAP_PREAUTH		RSN_CAP_PREAUTH
-
-/* Other WAI definition */
-#define WAPI_WAI_REQUEST		0x00F1
-#define WAPI_UNICAST_REKEY		0x00F2
-#define WAPI_STA_AGING			0x00F3
-#define WAPI_MUTIL_REKEY		0x00F4
-#define WAPI_STA_STATS			0x00F5
-
-#define WAPI_USK_REKEY_COUNT		0x4000000 /* 0xA00000 */
-#define WAPI_MSK_REKEY_COUNT		0x4000000 /* 0xA00000 */
-#endif /* BCMWAPI_WAI */
 #define WPA2_PMKID_COUNT_LEN	2
 
 

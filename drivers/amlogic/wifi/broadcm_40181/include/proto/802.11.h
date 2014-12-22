@@ -1154,9 +1154,6 @@ typedef struct ti_ie ti_ie_t;
 #define DOT11_MNG_EXT_CSA_ID			60	/* d11 Extended CSA */
 #define	DOT11_MNG_HT_ADD			61	/* d11 mgmt additional HT info */
 #define	DOT11_MNG_EXT_CHANNEL_OFFSET		62	/* d11 mgmt ext channel offset */
-#ifdef BCMWAPI_WAI
-#define DOT11_MNG_WAPI_ID           68  /* d11 management WAPI id */
-#endif
 #define DOT11_MNG_WAPI_ID			68	/* d11 management WAPI id */
 #define DOT11_MNG_TIME_ADVERTISE_ID	69	/* 11p time advertisement */
 #define DOT11_MNG_RRM_CAP_ID		70	/* 11k radio measurement capability */
@@ -2214,10 +2211,6 @@ typedef enum vht_op_chan_width {
 /* WCN */
 #define WCN_OUI			"\x00\x50\xf2"	/* WCN OUI */
 #define WCN_TYPE		4	/* WCN type */
-#ifdef BCMWAPI_WPI
-#define SMS4_KEY_LEN        16
-#define SMS4_WPI_CBC_MAC_LEN    16
-#endif
 
 
 /* 802.11r protocol definitions */
@@ -2340,14 +2333,6 @@ typedef struct pu_buffer_status_ie pu_buffer_status_ie_t;
 #define TDLS_PU_BUFFER_STATUS_AC_BE		2
 #define TDLS_PU_BUFFER_STATUS_AC_VI		4
 #define TDLS_PU_BUFFER_STATUS_AC_VO		8
-
-#ifdef BCMWAPI_WAI
-#define WAPI_IE_MIN_LEN     20  /* WAPI IE min length */
-#define WAPI_VERSION        1   /* WAPI version */
-#define WAPI_VERSION_LEN    2   /* WAPI version length */
-#define WAPI_OUI        "\x00\x14\x72"  /* WAPI OUI */
-#define WAPI_OUI_LEN        DOT11_OUI_LEN   /* WAPI OUI length */
-#endif /* BCMWAPI_WAI */
 
 /* This marks the end of a packed structure section. */
 #include <packed_section_end.h>

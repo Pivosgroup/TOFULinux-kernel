@@ -278,7 +278,6 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 		return 0;
 
 	sd_trace_hw4(("%s Enter\n", __FUNCTION__));
-    printk("%s Enter\n", __FUNCTION__);
 
 	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
 		return -EBUSY;
@@ -287,12 +286,14 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 	bcmsdh_oob_intr_set(0);
 #endif	/* defined(OOB_INTR_ONLY) */
 #else
+#if defined(CONFIG_HAS_EARLYSUSPEND)
     /* add by jiamin */
     if (func->num == 2 && !sdioinfo[func->num].do_late_resume) {
         printk("===manual bcmsdh_remove===\n");
         bcmsdh_remove(&func->dev);
         sdioinfo[func->num].do_late_resume = 1;
     }
+#endif
 #endif
 	dhd_mmc_suspend = TRUE;
 	smp_mb();
@@ -306,24 +307,21 @@ static int bcmsdh_sdmmc_resume(struct device *pdev)
 	struct sdio_func *func = dev_to_sdio_func(pdev);
 #endif /* defined(OOB_INTR_ONLY) */
 	sd_trace_hw4(("%s Enter\n", __FUNCTION__));
-    printk("%s Enter\n", __FUNCTION__);
 
 	dhd_mmc_suspend = FALSE;
 #ifdef CONFIG_BCM40181_POWER_ALWAYS_ON
 #if defined(OOB_INTR_ONLY)
-	if ((func->num == 2) && dhd_os_check_if_up(bcmsdh_get_drvdata())) {
+	if ((func->num == 2) && dhd_os_check_if_up(bcmsdh_get_drvdata()))
 		bcmsdh_oob_intr_set(1);
 
-        if (READ_AOBUS_REG(AO_RTI_STATUS_REG2) == WIFI_WAKE_FLAG) {
-            dhd_pub_t *pub = (dhd_pub_t *)bcmsdh_get_drvdata();
-            printk("wifi case wake up\n");
-            if (!pub)
-    		    return 0;
-    	    dhd_os_wake_lock_ctrl_timeout_enable(pub, 3000);
-            dhd_os_wake_lock_timeout(pub);
-            WRITE_AOBUS_REG(AO_RTI_STATUS_REG2, 0);
-        }
-	}
+    if (READ_AOBUS_REG(AO_RTI_STATUS_REG2) == WIFI_WAKE_FLAG) {
+        dhd_pub_t *pub = (dhd_pub_t *)bcmsdh_get_drvdata();
+        if (!pub)
+		    return 0;
+	    dhd_os_wake_lock_ctrl_timeout_enable(pub, 5000);
+        dhd_os_wake_lock_timeout(pub);
+        WRITE_AOBUS_REG(AO_RTI_STATUS_REG2, 0);
+    }
 #endif /* (OOB_INTR_ONLY) */
 #else
     gInstance->func[func->num] = func;

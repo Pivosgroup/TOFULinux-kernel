@@ -855,9 +855,6 @@ typedef enum sup_auth_status {
 #define CRYPTO_ALGO_WEP_MMH		9
 #define CRYPTO_ALGO_NALG		10
 #endif 
-#ifdef BCMWAPI_WPI
-#define CRYPTO_ALGO_SMS4        11
-#endif /* BCMWAPI_WPI */
 #define CRYPTO_ALGO_PMK			12	/* for 802.1x supp to set PMK before 4-way */
 
 #define WSEC_GEN_MIC_ERROR	0x0001
@@ -925,9 +922,6 @@ typedef struct {
 
 #define WSEC_ENABLED(wsec)	((wsec) & (WEP_ENABLED | TKIP_ENABLED | AES_ENABLED))
 #define WSEC_SES_OW_ENABLED(wsec)	((wsec) & SES_OW_ENABLED)
-#ifdef BCMWAPI_WPI
-#define SMS4_ENABLED        0x0100
-#endif /* BCMWAPI_WPI */
 
 #ifdef MFP
 #define MFP_CAPABLE		0x0200
@@ -949,12 +943,6 @@ typedef struct {
 #define WPA2_AUTH_PSK		0x0080	/* Pre-shared key */
 #define BRCM_AUTH_PSK           0x0100  /* BRCM specific PSK */
 #define BRCM_AUTH_DPT		0x0200	/* DPT PSK without group keys */
-#ifdef BCMWAPI_WAI
-#define WPA_AUTH_WAPI           0x0400
-#define WAPI_AUTH_NONE      WPA_AUTH_NONE   /* none (IBSS) */
-#define WAPI_AUTH_UNSPECIFIED   0x0400  /* over AS */
-#define WAPI_AUTH_PSK       0x0800  /* Pre-shared key */
-#endif /* BCMWAPI_WAI */
 #define WPA2_AUTH_MFP           0x1000  /* MFP (11w) in contrast to CCX */
 #define WPA2_AUTH_TPK		0x2000 	/* TDLS Peer Key */
 #define WPA2_AUTH_FT		0x4000 	/* Fast Transition. */
@@ -4423,21 +4411,6 @@ typedef BWL_PRE_PACKED_STRUCT struct {
 
 /* no strict structure packing */
 #include <packed_section_end.h>
-
-#ifdef BCMWAPI_WAI
-#define IV_LEN 16 /* XXX, same as SMS4_WPI_PN_LEN */
-struct wapi_sta_msg_t
-{
-	uint16  msg_type;
-	uint16  datalen;
-	uint8   vap_mac[6];
-	uint8   reserve_data1[2];
-	uint8   sta_mac[6];
-	uint8   reserve_data2[2];
-	uint8   gsn[IV_LEN];
-	uint8   wie[256];
-};
-#endif /* BCMWAPI_WAI */
 
 #ifndef LINUX_POSTMOGRIFY_REMOVAL
 /* Global ASSERT Logging */

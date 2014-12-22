@@ -601,9 +601,7 @@ extern uint android_msg_level;
 #ifdef CONFIG_WIRELESS_EXT
 extern uint iw_msg_level;
 #endif
-#ifdef WL_CFG80211
 extern uint wl_dbg_level;
-#endif
 extern uint dhd_slpauto;
 
 /* Use interrupts */
@@ -707,7 +705,6 @@ extern uint dhd_pktgen_len;
 #define MOD_PARAM_PATHLEN	2048
 extern char fw_path[MOD_PARAM_PATHLEN];
 extern char nv_path[MOD_PARAM_PATHLEN];
-extern char conf_path[MOD_PARAM_PATHLEN];
 
 #define MOD_PARAM_INFOLEN	512
 
@@ -717,8 +714,16 @@ extern char fw_path2[MOD_PARAM_PATHLEN];
 
 #define FW_PATH_AUTO_SELECT 1
 extern char firmware_path[MOD_PARAM_PATHLEN];
+#ifdef FW_PATH_AUTO_SELECT
 extern void dhd_bus_select_firmware_name_by_chip(struct dhd_bus *bus, char *dst, char *src);
-#define COPY_FW_PATH_BY_CHIP(bus, dst, src)	dhd_bus_select_firmware_name_by_chip(bus, dst, src);
+#define COPY_FW_PATH_BY_CHIP( bus, dst, src)	dhd_bus_select_firmware_name_by_chip( bus, dst, src);	
+#else
+#define COPY_FW_PATH_BY_CHIP( bus, dst, src)	strcpy(dst, src)
+#endif
+#if defined(RSSIOFFSET) || 1
+extern void dhd_bus_get_chip_ver(struct dhd_bus *bus, uint *chip, uint *chiprev);
+#define GET_CHIP_VER(bus, chip, chiprev)	dhd_bus_get_chip_ver(bus, chip, chiprev)
+#endif
 
 /* Flag to indicate if we should download firmware on driver load */
 extern uint dhd_download_fw_on_driverload;
@@ -841,7 +846,7 @@ typedef struct dhd_pkttag {
 	(dstn_MAC_ea), ETHER_ADDR_LEN)
 #define DHD_PKTTAG_DSTN(tag)	((dhd_pkttag_t*)(tag))->dstn_ether
 
-typedef int (*f_commitpkt_t)(void* ctx, void* p, bool wlfc_locked);
+typedef int (*f_commitpkt_t)(void* ctx, void* p);
 
 #ifdef PROP_TXSTATUS_DEBUG
 #define DHD_WLFC_CTRINC_MAC_CLOSE(entry)	do { (entry)->closed_ct++; } while (0)

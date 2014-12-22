@@ -48,13 +48,6 @@ config BCMDHD_NVRAM_PATH
 	---help---
 	  Path to the calibration file.
 
-config BCMDHD_CONFIG_PATH
-	depends on SDIO && SDIO_DHD_CDC_WIFI_40181_MODULE
-	string "Config path"
-	default "/system/etc/firmware/config.txt"
-	---help---
-	  Path to the driver configuration file.
-
 config BCMDHD_WEXT
 	bool "Enable WEXT support"
 	depends on SDIO_DHD_CDC_WIFI_40181_MODULE && CFG80211 = n

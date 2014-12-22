@@ -1022,7 +1022,7 @@ _dhd_wlfc_send_signalonly_packet(athost_wl_status_info_t* ctx, wlfc_mac_descript
 #ifdef PROP_TXSTATUS_DEBUG
 		ctx->stats.signal_only_pkts_sent++;
 #endif
-		rc = dhd_bus_txdata(((dhd_pub_t *)ctx->dhdp)->bus, p, FALSE);
+		rc = dhd_bus_txdata(((dhd_pub_t *)ctx->dhdp)->bus, p);
 		if (rc != BCME_OK) {
 			PKTFREE(ctx->osh, p, TRUE);
 		}
@@ -1517,7 +1517,7 @@ _dhd_wlfc_handle_packet_commit(athost_wl_status_info_t* ctx, int ac,
 	     commit_info->needs_hdr, &hslot);
 
 	if (rc == BCME_OK)
-		rc = fcommit(commit_ctx, commit_info->p, TRUE);
+		rc = fcommit(commit_ctx, commit_info->p);
 	else
 		ctx->stats.generic_error++;
 
@@ -1756,15 +1756,14 @@ dhd_wlfc_find_mac_desc_id_from_mac(dhd_pub_t *dhdp, uint8* ea)
 }
 
 void
-dhd_wlfc_txcomplete(dhd_pub_t *dhd, void *txp, bool success, bool wake_locked)
+dhd_wlfc_txcomplete(dhd_pub_t *dhd, void *txp, bool success)
 {
 	athost_wl_status_info_t* wlfc = (athost_wl_status_info_t*)
 		dhd->wlfc_state;
 	void* p;
 	int fifo_id;
 
-	if (!wake_locked)
-		dhd_os_wlfc_block(dhd);
+	dhd_os_wlfc_block(dhd);
 
 	if (DHD_PKTTAG_SIGNALONLY(PKTTAG(txp))) {
 #ifdef PROP_TXSTATUS_DEBUG
@@ -1773,8 +1772,7 @@ dhd_wlfc_txcomplete(dhd_pub_t *dhd, void *txp, bool success, bool wake_locked)
 		if (success)
 			/* is this a signal-only packet? */
 			PKTFREE(wlfc->osh, txp, TRUE);
-		if (!wake_locked)
-			dhd_os_wlfc_unblock(dhd);
+		dhd_os_wlfc_unblock(dhd);
 		return;
 	}
 	if (!success) {
@@ -1809,8 +1807,7 @@ dhd_wlfc_txcomplete(dhd_pub_t *dhd, void *txp, bool success, bool wake_locked)
 
 		PKTFREE(wlfc->osh, txp, TRUE);
 	}
-	if (!wake_locked)
-		dhd_os_wlfc_unblock(dhd);
+	dhd_os_wlfc_unblock(dhd);
 	return;
 }
 
