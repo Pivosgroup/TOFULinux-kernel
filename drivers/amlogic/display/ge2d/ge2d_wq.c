@@ -612,7 +612,7 @@ static int build_ge2d_config_ex(config_planes_t *plane, unsigned format, unsigne
 	return ret;
 }
 
-
+EXPORT_SYMBOL(ge2d_context_config_ex);
 int ge2d_context_config_ex(ge2d_context_t *context, config_para_ex_t *ge2d_config)
 {
 	src_dst_para_t  tmp;
@@ -798,6 +798,7 @@ int ge2d_context_config_ex(ge2d_context_t *context, config_para_ex_t *ge2d_confi
 /***********************************************************************
 ** interface for init  create & destroy work_queue
 ************************************************************************/
+EXPORT_SYMBOL(create_ge2d_work_queue);
 ge2d_context_t* create_ge2d_work_queue(void)
 {
 	int  i;
@@ -836,6 +837,7 @@ ge2d_context_t* create_ge2d_work_queue(void)
 	spin_unlock(&ge2d_manager.event.sem_lock);
 	return ge2d_work_queue; //find it 
 }
+EXPORT_SYMBOL(destroy_ge2d_work_queue);
 int  destroy_ge2d_work_queue(ge2d_context_t* ge2d_work_queue)
 {
 	ge2d_queue_item_t    	*pitem,*tmp;

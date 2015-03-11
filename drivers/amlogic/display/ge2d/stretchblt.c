@@ -89,6 +89,7 @@ static inline void _stretchblt_noalpha(ge2d_context_t *wq,
     ge2d_wq_add_work(wq);
 }
 
+EXPORT_SYMBOL(stretchblt_noalpha);
 void stretchblt_noalpha(ge2d_context_t *wq,
                         int src_x, int src_y, int src_w, int src_h,
                         int dst_x, int dst_y, int dst_w, int dst_h)

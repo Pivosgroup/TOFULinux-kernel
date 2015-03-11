@@ -5,3 +5,4 @@
 obj-y += misc/
 obj-y += touchscreen/
 obj-y += amllight/
+obj-y += pivos/

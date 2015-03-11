@@ -2814,6 +2814,12 @@ static void _set_video_window(int *p)
     video_property_changed = true;
 }
 
+static u32 get_amvideo_frame_count(void)
+{
+  return frame_count;
+}
+EXPORT_SYMBOL(get_amvideo_frame_count);
+
 /*********************************************************
  * /dev/amvideo APIs
  *********************************************************/
@@ -4187,6 +4193,7 @@ vframe_t* get_cur_dispbuf(void)
 {
 	return  cur_dispbuf;
 }
+EXPORT_SYMBOL(get_cur_dispbuf);
 
 static void vout_hook(void)
 {

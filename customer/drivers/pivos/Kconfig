@@ -1,0 +1,9 @@
+menu "Pivos/Amlogic Support"
+
+config PIVOS_AM_SNAPSHOT
+	tristate "Pivos/Amlogic Boblight Support"
+	default n
+	---help---
+	  Select to enable "Pivos/Amlogic Boblight Support.
+
+endmenu

@@ -8,5 +8,10 @@ source "customer/drivers/misc/Kconfig"
 source "customer/drivers/touchscreen/Kconfig"
 source "customer/drivers/amllight/Kconfig"
 
+#
+# pivos
+#
+source "customer/drivers/pivos/Kconfig"
+
 endmenu
 endif # PLAT_MESON
