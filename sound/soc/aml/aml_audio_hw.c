@@ -482,7 +482,6 @@ void audio_util_set_dac_format(unsigned format)
 }
 
 extern unsigned int get_ddr_pll_clk(void);
-static int last_freq = -1;
 void audio_set_clk(unsigned freq, unsigned fs_config)
 {
     int i;
@@ -532,11 +531,6 @@ void audio_set_clk(unsigned freq, unsigned fs_config)
 				index=0;
 				break;
 		};
-		if(freq != last_freq){
-			last_freq = freq;
-		}
-		else
-			return;
 #if MESON_CPU_TYPE < MESON_CPU_TYPE_MESON6
 	// get system crystal freq
 		clk=clk_get_sys("clk_xtal", NULL);

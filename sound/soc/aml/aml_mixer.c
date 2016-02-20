@@ -215,8 +215,8 @@ static int pcm_pb_data_get(struct snd_kcontrol *kcontrol,
 {
     unsigned int rd_ptr;
 
-  /*  rd_ptr = read_i2s_rd_ptr();
-    memcpy(uvalue->value.bytes.data, (unsigned char*)rd_ptr, 128);*/
+    rd_ptr = read_i2s_rd_ptr();
+    memcpy(uvalue->value.bytes.data, (unsigned char*)rd_ptr, 128);
     return 0;
 }
 
@@ -234,7 +234,7 @@ static int pcm_pb_tone_info(struct snd_kcontrol *kcontrol,
 static int pcm_pb_tone_put(struct snd_kcontrol *kcontrol,
 				    struct snd_ctl_elem_value *uvalue)
 {
-     //audio_tone_control.tone_flag = 1;
+     audio_tone_control.tone_flag = 1;
 	
      return 0;
 }
@@ -337,7 +337,7 @@ int aml_alsa_create_ctrl(struct snd_card *card, void *p_value)
                      snd_ctl_new1(&pcm_switch_pb_mute, p_value))) < 0)
         return err;
 
- /*   if ((err =
+    if ((err =
          snd_ctl_add(card,
                      snd_ctl_new1(&pcm_pb_left_mono, p_value))) < 0)
         return err;
@@ -357,15 +357,15 @@ int aml_alsa_create_ctrl(struct snd_card *card, void *p_value)
                      snd_ctl_new1(&pcm_pb_swap, p_value))) < 0)
         return err;
 
-     if ((err =
+    if ((err =
          snd_ctl_add(card,
                      snd_ctl_new1(&pcm_data_read, p_value))) < 0)
         return err;
 
-   if ((err =
+    if ((err =
          snd_ctl_add(card,
                      snd_ctl_new1(&pcm_tone_play, p_value))) < 0)
-        return err;*/
+        return err;
 	
     return 0;
 }

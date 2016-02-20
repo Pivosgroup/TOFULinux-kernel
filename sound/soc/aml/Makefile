@@ -1,5 +1,4 @@
 # AML Platform Support
-snd-soc-aml-mixer-objs := aml_mixer.o
 snd-soc-aml-pcm-objs := aml_pcm.o
 snd-soc-aml-platform-pcm2bt-objs := aml_platform_pcm2bt.o
 snd-soc-aml-dai-objs := aml_dai.o
@@ -7,7 +6,6 @@ snd-soc-aml-hw-objs  := aml_audio_hw.o
 snd-soc-aml-hw-pcm2bt-objs  := aml_audio_hw_pcm2bt.o
 snd-soc-aml-platform-objs := aml_platform.o
 
-obj-$(CONFIG_SND_AML_SOC) += snd-soc-aml-mixer.o
 obj-$(CONFIG_SND_AML_SOC) += snd-soc-aml-pcm.o
 obj-$(CONFIG_SND_AML_SOC) += snd-soc-aml-dai.o
 obj-$(CONFIG_SND_AML_SOC) += snd-soc-aml-hw.o

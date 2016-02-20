@@ -33,7 +33,7 @@
 #include "aml_dai.h"
 #include "aml_pcm.h"
 #include "aml_audio_hw.h"
-#include "aml_alsa_common.h"
+
 
 static struct dummy_codec_platform_data *dummy_codec_snd_pdata = NULL;
 
@@ -193,9 +193,7 @@ static int dummy_codec_audio_probe(struct platform_device *pdev)
         printk(KERN_ERR "ASoC: Platform device allocation failed\n");
         goto err_device_add;
     }
-	
-   if (0 == aml_alsa_create_ctrl(snd_soc_dummy_codec.snd_card,&audio_mixer_control))
-        printk("dummy codec control ALSA component registered!\n");
+
 
     dummy_codec_dev_init();
 

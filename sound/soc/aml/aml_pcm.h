@@ -33,7 +33,6 @@ typedef struct audio_mixer_control {
     int input_volume;
     int output_volume;
 } audio_mixer_control_t;
-extern audio_mixer_control_t audio_mixer_control;
 
 typedef struct audio_tone_control {
     unsigned short * tone_source;

@@ -31,12 +31,11 @@
 #include "aml_pcm.h"
 #include "aml_audio_hw.h"
 #include "aml_platform.h"
-#include "aml_alsa_common.h"
 //#define _AML_PCM_DEBUG_
 //
 
-#define USE_HRTIMER  0
-#define HRTIMER_PERIOD (1000000000UL/1000)
+#define USE_HRTIMER 1
+#define HRTIMER_PERIOD (1000000000UL/48000)
 
 #define AOUT_EVENT_IEC_60958_PCM                0x1
 #define AOUT_EVENT_RAWDATA_AC_3                 0x2
@@ -74,98 +73,6 @@ unsigned int aml_pcm_capture_phy_end_addr = 0;
 unsigned int aml_pcm_playback_off = 0;
 unsigned int aml_pcm_playback_enable = 1;
 
-unsigned int playback_sr = 0;
-static unsigned int playback_data_cache_start = 0;
-static unsigned int playback_data_cache_buf_size = 0;
-static unsigned int playback_data_cache_rp = 0;
-static unsigned int playback_data_cache_wp = 0;
-unsigned int playback_data_read_enable = 0;
-EXPORT_SYMBOL(playback_sr);
-EXPORT_SYMBOL(playback_data_read_enable);
-static int get_pcm_cache_space(){
-    int space;	
-    if(playback_data_cache_wp >= playback_data_cache_rp){
-        space =  playback_data_cache_buf_size - (playback_data_cache_wp -playback_data_cache_rp );
-    }else{
-        space =  playback_data_cache_rp - playback_data_cache_wp;
-    }
-    return space;
-}
-static int get_pcm_cache_content(){
-	return playback_data_cache_buf_size- get_pcm_cache_space();
-}
-static  int cache_pcm_write(char __user *buf, int size)
-{
-	int tail;
-	if(!playback_data_cache_wp || !playback_data_cache_rp || !playback_data_cache_buf_size)
-	{
-		printk("write ! check the audio cached buffer ptr \n");
-		return -1;
-	}
-	if((playback_data_cache_wp+size) > (playback_data_cache_buf_size+playback_data_cache_start))
-	{
-		tail = playback_data_cache_buf_size+playback_data_cache_start - playback_data_cache_wp;
-		if(copy_from_user((char*)playback_data_cache_wp, buf, tail)){
-			printk("copy audio pcm from user failed \n");
-			return -EFAULT;
-		}	
-		playback_data_cache_wp = playback_data_cache_start;
-		if(copy_from_user((char*)playback_data_cache_wp, buf+tail, size-tail)){
-			printk("copy audio pcm from user failed \n");
-			return -EFAULT;
-		}
-		playback_data_cache_wp = playback_data_cache_start+size-tail;
-	}
-	else{
-		if(copy_from_user((char*)playback_data_cache_wp, buf, size)){
-			printk("copy audio pcm from user failed \n");
-			return -EFAULT;
-		}
-		playback_data_cache_wp += size;		
-	}
-       return size;
-}
-int cache_pcm_read(char __user *buf, int size)
-{
-	int tail;
-	int data_left = get_pcm_cache_content();
-	if(data_left  <= 0)
-		return 0;
-	if(data_left < size)
-		size = data_left;
-	if(!playback_data_cache_wp || !playback_data_cache_rp || !playback_data_cache_buf_size)
-	{
-		printk("read!check the audio cached buffer ptr \n");
-		return -1;
-	}
-	
-	if((playback_data_cache_rp+size) > (playback_data_cache_buf_size+playback_data_cache_start))
-	{
-		tail = playback_data_cache_buf_size+playback_data_cache_start - playback_data_cache_rp;
-		if(copy_to_user(buf,(char*)playback_data_cache_rp, tail)){
-			printk("copy audio pcm to user failed \n");
-			return -EFAULT;
-		}	
-		playback_data_cache_rp = playback_data_cache_start;
-		if(copy_to_user(buf+tail,(char*)playback_data_cache_rp,  size-tail)){
-			printk("copy audio pcm to  user failed \n");
-			return -EFAULT;
-		}
-		playback_data_cache_rp = playback_data_cache_start+size-tail;
-	}
-	else{
-		if(copy_to_user(buf,(char*)playback_data_cache_rp,  size)){
-			printk("copy audio pcm to  user failed \n");
-			return -EFAULT;
-		}
-		playback_data_cache_rp += size;		
-	}
-       return size;
-	
-}
-
-
-
 unsigned int aml_iec958_playback_start_addr = 0;
 unsigned int aml_iec958_playback_start_phy = 0;
 unsigned int aml_iec958_playback_size = 0;  // in bytes
@@ -178,8 +85,6 @@ static unsigned clock_gating_capture = 2;
 static int audio_type_info = -1;
 static int audio_sr_info = -1;
 extern unsigned audioin_mode;
-static unsigned trigger_underun = 0;
-static DEFINE_MUTEX(substream_mutex);
 
 
 static int audio_ch_info = -1;
@@ -200,30 +105,6 @@ EXPORT_SYMBOL(aml_pcm_playback_start_addr);
 EXPORT_SYMBOL(aml_pcm_capture_start_addr);
 EXPORT_SYMBOL(aml_pcm_playback_off);
 EXPORT_SYMBOL(aml_pcm_playback_enable);
-
-audio_mixer_control_t audio_mixer_control;
-EXPORT_SYMBOL_GPL(audio_mixer_control);
-int get_mixer_output_volume(void){
-	int val;
-	val = audio_mixer_control.output_volume;
-	return val;
-	}
-
-int set_mixer_output_volume(int volume){
-	audio_mixer_control.output_volume = volume;
-	return 0;
-	}
-
-static void aml_pcm_mixer_controls_init(){
-	printk("init controls\n");
-	audio_mixer_control_t *audio_control;
-	audio_control = &audio_mixer_control;
-	memset(audio_control, 0, sizeof(audio_mixer_control_t));
-	audio_control->output_devide = SOUND_MASK_VOLUME | SOUND_MASK_PCM;
-	audio_control->output_volume = 100;
-}
-
-#define VOL_CTL(s) ((unsigned int)(((signed short)(s))*(vol))>>VOLUME_SHIFT)
 
 static void aml_codec_power_switch_queue(struct work_struct* work)
 {
@@ -393,18 +274,7 @@ static int aml_pcm_preallocate_dma_buffer(struct snd_pcm *pcm,
 		    (void *) buf->area,
 		    (void *) buf->addr,
 		    size);
-		if(!playback_data_cache_start){	
-			playback_data_cache_start = (unsigned int)kmalloc(size*2,GFP_KERNEL);
-			if(!playback_data_cache_start){
-				printk("malloc for the audio output cache buffer fail \n");
-				return -ENOMEM;
-			}
-			playback_data_cache_buf_size = 2*size;
-			playback_data_cache_rp = playback_data_cache_start;
-			playback_data_cache_wp = playback_data_cache_start;
 
-		}
-		
             /* alloc iec958 buffer */
 
             aml_pcm_playback_start_addr = (unsigned int)buf->area;
@@ -421,7 +291,6 @@ static int aml_pcm_preallocate_dma_buffer(struct snd_pcm *pcm,
           return -ENOMEM;
         }
         aml_iec958_playback_size = size*4;
-        aml_pcm_mixer_controls_init();//init output vol
         printk("iec958 %d: preallocate dma buffer start=%p, size=%x\n", stream, (void*)aml_iec958_playback_start_addr, size*4);
 	}else{
 		size = aml_pcm_capture.buffer_bytes_max;
@@ -570,8 +439,6 @@ static void  aml_hw_i2s_init(struct snd_pcm_runtime *runtime)
 		memset((void*)runtime->dma_area,0,runtime->dma_bytes + 4096);
 		/* update the i2s hw buffer end addr as android may update that */
 		aml_pcm_playback_phy_end_addr = aml_pcm_playback_phy_start_addr+runtime->dma_bytes;
-		playback_data_cache_rp = playback_data_cache_start;
-		playback_data_cache_wp = playback_data_cache_start;
 		printk("I2S hw init,i2s mode %d\n",I2S_MODE);
 
 }
@@ -597,7 +464,6 @@ static int audio_notify_hdmi_info(int audio_type, void *v){
 static void iec958_notify_hdmi_info(void)
 {
 	unsigned audio_type = AOUT_EVENT_IEC_60958_PCM;
-	mutex_lock(&substream_mutex);
 	if(playback_substream_handle){
 		if(IEC958_mode_codec == 2) //dd
 			audio_type = AOUT_EVENT_RAWDATA_AC_3;
@@ -613,7 +479,7 @@ static void iec958_notify_hdmi_info(void)
 	else{
 		printk("substream for playback NULL\n");
 	}
-	mutex_unlock(&substream_mutex);
+
 }
 /*
 special call by the audiodsp,add these code,as there are three cases for 958 s/pdif output
@@ -621,19 +487,14 @@ special call by the audiodsp,add these code,as there are three cases for 958 s/p
 2)PCM  output for  all audio, when pcm mode is selected by user .
 3)PCM  output for audios except ac3/dts,when raw output mode is selected by user
 */
-static void aml_hw_iec958_init(struct snd_pcm_substream *substream)
+static void aml_hw_iec958_init(void)
 {
     _aiu_958_raw_setting_t set;
     _aiu_958_channel_status_t chstat;
     unsigned start,size;
-    unsigned sr = 48000;	
 	memset((void*)(&set), 0, sizeof(set));
 	memset((void*)(&chstat), 0, sizeof(chstat));
 	set.chan_stat = &chstat;
-	if(substream){
-		struct snd_pcm_runtime *runtime = substream->runtime;
-		sr  = runtime->rate;
-	}
    	/* case 1,raw mode enabled */
 	if(IEC958_mode_codec){
 	  if(IEC958_mode_codec == 1){ //dts, use raw sync-word mode
@@ -656,50 +517,25 @@ static void aml_hw_iec958_init(struct snd_pcm_substream *substream)
 
 	if(IEC958_MODE == AIU_958_MODE_PCM16 || IEC958_MODE == AIU_958_MODE_PCM24 ||
 	  IEC958_MODE == AIU_958_MODE_PCM32){
-		set.chan_stat->chstat0_l = 0x0100;
+	    set.chan_stat->chstat0_l = 0x0100;
 		set.chan_stat->chstat0_r = 0x0100;
-		start = (aml_pcm_playback_phy_start_addr);
-		size = aml_pcm_playback_phy_end_addr - aml_pcm_playback_phy_start_addr;
+		set.chan_stat->chstat1_l = 0X200;
+		set.chan_stat->chstat1_r = 0X200;
+        start = (aml_pcm_playback_phy_start_addr);
+        size = aml_pcm_playback_phy_end_addr - aml_pcm_playback_phy_start_addr;
 		audio_set_958outbuf(start, size, 0);
 	  }else{
 		set.chan_stat->chstat0_l = 0x1902;//NONE-PCM
 		set.chan_stat->chstat0_r = 0x1902;
-		// start = ((aml_pcm_playback_phy_end_addr + 4096)&(~127));
-		// size  = aml_pcm_playback_phy_end_addr - aml_pcm_playback_phy_start_addr;
-		start = aml_iec958_playback_start_phy;
-		size = aml_iec958_playback_size;
+		set.chan_stat->chstat1_l = 0X200;
+		set.chan_stat->chstat1_r = 0X200;
+        // start = ((aml_pcm_playback_phy_end_addr + 4096)&(~127));
+        // size  = aml_pcm_playback_phy_end_addr - aml_pcm_playback_phy_start_addr;
+        start = aml_iec958_playback_start_phy;
+        size = aml_iec958_playback_size;
 		audio_set_958outbuf(start, size, (IEC958_MODE == AIU_958_MODE_RAW)?1:0);
 		memset((void*)aml_iec958_playback_start_addr,0,size);
-	}
-	  /* set the channel status bit for sample rate */
-	printk("aml_hw_iec958_init audio sr %d \n",  sr);
-	if(IEC958_mode_codec == 4){
-		if(sr == 32000){
-			set.chan_stat->chstat1_l = 0x300;
-			set.chan_stat->chstat1_r = 0x300;
-		}
-		else if(sr == 44100){
-			set.chan_stat->chstat1_l = 0xc00;
-			set.chan_stat->chstat1_r = 0xc00;			
-		}
-		else{
-			set.chan_stat->chstat1_l = 0Xe00;
-			set.chan_stat->chstat1_r = 0Xe00;			
-		}		
-	}
-	else{  
-		if(sr == 32000){
-			set.chan_stat->chstat1_l = 0x300;
-			set.chan_stat->chstat1_r = 0x300;
-		}
-		else if(sr == 44100){
-			set.chan_stat->chstat1_l = 0;
-			set.chan_stat->chstat1_r = 0;			
-		}
-		else{
-			set.chan_stat->chstat1_l = 0X200;
-			set.chan_stat->chstat1_r = 0X200;			
-		}
+
 	}
 	audio_set_958_mode(IEC958_MODE, &set);
 	if(IEC958_mode_codec == 4)  //dd+
@@ -718,9 +554,8 @@ static void aml_hw_iec958_init(struct snd_pcm_substream *substream)
 void	aml_alsa_hw_reprepare(void)
 {
 	/* diable 958 module before call initiation */
-	//audio_hw_958_enable(0);
-  	//aml_hw_iec958_init((struct snd_pcm_substream *)playback_substream_handle);
-  	trigger_underun = 1;
+	audio_hw_958_enable(0);
+  aml_hw_iec958_init();
 
 }
 
@@ -784,10 +619,8 @@ static int aml_pcm_prepare(struct snd_pcm_substream *substream)
 	audio_set_clk(s->sample_rate, AUDIO_CLK_256FS);
 	audio_util_set_dac_format(AUDIO_ALGOUT_DAC_FORMAT_DSP);
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
-			trigger_underun = 0;
-			playback_sr = runtime->rate;
 			aml_hw_i2s_init(runtime);
-		  	aml_hw_iec958_init(substream);
+		  aml_hw_iec958_init();
 	}
 	else{
 			//printk("aml_pcm_prepare SNDRV_PCM_STREAM_CAPTURE: dma_addr=%x, dma_bytes=%x\n", runtime->dma_addr, runtime->dma_bytes);
@@ -1168,11 +1001,8 @@ static int aml_pcm_close(struct snd_pcm_substream *substream)
 #endif
 	kfree(prtd);
 
-	if(substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
+	if(substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		playback_substream_handle = 0;
-		mutex_unlock(&substream_mutex);	
-	}
-	printk("pcm close for %s \n",substream->stream == SNDRV_PCM_STREAM_PLAYBACK?"playback":"capture");
 	return 0;
 }
 
@@ -1189,30 +1019,7 @@ static int aml_pcm_copy_playback(struct snd_pcm_runtime *runtime, int channel,
     n = frames_to_bytes(runtime, count);
     if(aml_pcm_playback_enable == 0)
       return res;
-    if(trigger_underun){
-		printk("trigger underun \n");
-		return -EFAULT;
-    }
-    register unsigned  int vol =(audio_mixer_control.output_volume*(1<<VOLUME_SHIFT))/VOLUME_SCALE;
     if(access_ok(VERIFY_READ, buf, frames_to_bytes(runtime, count))){
-	/*
-	store the output data to cache buffer for pcm capture function
-	*/
-	if(playback_data_read_enable){
-		if(get_pcm_cache_space() < n ){
-			if(playback_data_cache_rp == playback_data_cache_start){
-			/* guess user space not start to read data use amaudio interface ,just reset
-			the wp then write data from the next loop
-			*/
-				playback_data_cache_wp = playback_data_cache_start;
-			}
-			else {
-				printk("use space read output data toooo slow. hurry up\n");
-			}	
-		}
-		else 
-			cache_pcm_write(buf,n);
-    	}
 	  if(runtime->format == SNDRV_PCM_FORMAT_S16_LE && I2S_MODE == AIU_I2S_MODE_PCM16){
         int16_t * tfrom, *to, *left, *right;
         tfrom = (int16_t*)buf;
@@ -1225,8 +1032,8 @@ static int aml_pcm_copy_playback(struct snd_pcm_runtime *runtime, int channel,
 		}
 		for (j = 0; j < n; j += 64) {
 		    for (i = 0; i < 16; i++) {
-	          *left++ = (int16_t)(VOL_CTL(*tfrom++)) ;
-	          *right++ =(int16_t)(VOL_CTL(*tfrom++)) ;
+	          *left++ = (*tfrom++) ;
+	          *right++ = (*tfrom++);
 		    }
 		    left += 16;
 		    right += 16;
@@ -1244,8 +1051,8 @@ static int aml_pcm_copy_playback(struct snd_pcm_runtime *runtime, int channel,
         }
         for(j=0; j< n; j+= 64){
           for(i=0; i<8; i++){
-            *left++  =  (int32_t)(VOL_CTL(*tfrom++)) ;
-            *right++  = (int32_t)(VOL_CTL(*tfrom++)) ;
+            *left++  =  (*tfrom ++);
+            *right++  = (*tfrom ++);
           }
           left += 8;
           right += 8;
@@ -1275,14 +1082,14 @@ static int aml_pcm_copy_playback(struct snd_pcm_runtime *runtime, int channel,
 			sbr = to + 8*7;
 			for (j = 0; j < n; j += 256) {
 		    	for (i = 0; i < 8; i++) {
-	         		*lf++  = (int32_t)(VOL_CTL((*tfrom ++)>>8));
-	          		*cf++  = (int32_t)(VOL_CTL((*tfrom ++)>>8));
-					*rf++  = (int32_t)(VOL_CTL((*tfrom ++)>>8));
-					*ls++  = (int32_t)(VOL_CTL((*tfrom ++)>>8));
-					*rs++  = (int32_t)(VOL_CTL((*tfrom ++)>>8));
-					*lef++ = (int32_t)(VOL_CTL((*tfrom ++)>>8));
-					*sbl++ = (int32_t)(VOL_CTL((*tfrom ++)>>8));
-					*sbr++ = (int32_t)(VOL_CTL((*tfrom ++)>>8));
+	         		*lf++  = (*tfrom ++)>>8;
+	          		*cf++  = (*tfrom ++)>>8;
+					*rf++  = (*tfrom ++)>>8;
+					*ls++  = (*tfrom ++)>>8;
+					*rs++  = (*tfrom ++)>>8;
+					*lef++ = (*tfrom ++)>>8;
+					*sbl++ = (*tfrom ++)>>8;
+					*sbr++ = (*tfrom ++)>>8;
 		    	}
 		    	lf  += 7*8;
 		    	cf  += 7*8;
@@ -1297,8 +1104,8 @@ static int aml_pcm_copy_playback(struct snd_pcm_runtime *runtime, int channel,
 		else {
         for(j=0; j< n; j+= 64){
           for(i=0; i<8; i++){
-            *left++  =  (int32_t)(VOL_CTL((*tfrom ++)>>8));
-            *right++  = (int32_t)(VOL_CTL((*tfrom ++)>>8));
+            *left++  =  (*tfrom ++)>>8;
+            *right++  = (*tfrom ++)>>8;
           }
           left += 8;
           right += 8;
